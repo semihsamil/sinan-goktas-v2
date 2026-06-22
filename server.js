@@ -581,7 +581,7 @@ app.post('/api/register', (req, res) => {
 
 app.get('/api/users', requireAuth, requireAdmin, (_req, res) => {
     db.all(
-        `SELECT id, username, role, full_name, phone, site_name, company_name, created_at
+        `SELECT id, username, password, role, full_name, phone, site_name, company_name, extra_note, created_at
          FROM users ORDER BY created_at DESC`,
         [],
         (err, rows) => {
@@ -590,12 +590,14 @@ app.get('/api/users', requireAuth, requireAdmin, (_req, res) => {
                 (rows || []).map((u) => ({
                     id: u.id,
                     username: u.username,
+                    password: u.password || '',
                     role: u.role || 'personel',
                     roleLabel: ROLE_LABELS[u.role] || u.role,
                     fullName: u.full_name || '',
                     phone: u.phone || '',
                     siteName: u.site_name || '',
                     companyName: u.company_name || '',
+                    extraNote: u.extra_note || '',
                     createdAt: u.created_at || '',
                 }))
             );
@@ -607,18 +609,40 @@ app.put('/api/users/:id', requireAuth, requireAdmin, (req, res) => {
     const id = parseInt(req.params.id, 10);
     if (!id) return res.status(400).json({ error: 'Geçersiz id' });
 
+    const username = String(req.body?.username ?? '').trim();
     const role = String(req.body?.role || '').trim();
-    const fullName = String(req.body?.fullName || '').trim();
-    const phone = String(req.body?.phone || '').trim();
-    const siteName = String(req.body?.siteName || '').trim();
-    const companyName = String(req.body?.companyName || '').trim();
-    const password = String(req.body?.password || '');
+    const fullName = String(req.body?.fullName ?? '').trim();
+    const phone = String(req.body?.phone ?? '').trim();
+    const siteName = String(req.body?.siteName ?? '').trim();
+    const companyName = String(req.body?.companyName ?? '').trim();
+    const extraNote = String(req.body?.extraNote ?? '').trim();
+    const password = String(req.body?.password ?? '');
 
+    if (username) {
+        if (username.length < 3 || username.length > 32) {
+            return res.status(400).json({ error: 'Kullanıcı adı 3-32 karakter olmalı' });
+        }
+        if (!/^[a-zA-Z0-9._-]+$/.test(username)) {
+            return res.status(400).json({ error: 'Kullanıcı adında sadece harf, rakam, . _ - kullanılabilir' });
+        }
+    }
     if (role && !VALID_ROLES.includes(role)) {
         return res.status(400).json({ error: 'Geçersiz rol' });
     }
+    if (fullName && (fullName.length < 2 || fullName.length > 80)) {
+        return res.status(400).json({ error: 'Ad soyad 2-80 karakter olmalı' });
+    }
     if (phone && !/^\+90 5\d{9}$/.test(phone)) {
         return res.status(400).json({ error: 'Telefon formatı +90 5XXXXXXXXX olmalı' });
+    }
+    if (siteName.length > 80 || companyName.length > 80) {
+        return res.status(400).json({ error: 'Şantiye/Kurum adı en fazla 80 karakter olabilir' });
+    }
+    if (extraNote.length > 200) {
+        return res.status(400).json({ error: 'Not en fazla 200 karakter olabilir' });
+    }
+    if (password && password.length < 6) {
+        return res.status(400).json({ error: 'Şifre en az 6 karakter olmalı' });
     }
 
     db.get('SELECT id, username, role FROM users WHERE id=?', [id], (err, user) => {
@@ -630,43 +654,51 @@ app.put('/api/users/:id', requireAuth, requireAdmin, (req, res) => {
                 if ((row?.c || 0) <= 1) {
                     return res.status(400).json({ error: 'Son admin kullanıcısının rolü değiştirilemez' });
                 }
-                updateUserRecord();
+                checkUsernameAndUpdate();
             });
             return;
         }
 
-        updateUserRecord();
+        checkUsernameAndUpdate();
+
+        function checkUsernameAndUpdate() {
+            if (username && username !== user.username) {
+                db.get('SELECT id FROM users WHERE username=? AND id!=?', [username, id], (nameErr, existing) => {
+                    if (nameErr) return res.status(500).json({ error: 'Güncelleme hatası' });
+                    if (existing) return res.status(409).json({ error: 'Bu kullanıcı adı zaten kayıtlı' });
+                    updateUserRecord();
+                });
+                return;
+            }
+            updateUserRecord();
+        }
 
         function updateUserRecord() {
             const fields = [];
             const values = [];
 
+            if (username && username !== user.username) {
+                fields.push('username=?');
+                values.push(username);
+            }
             if (role) {
                 fields.push('role=?');
                 values.push(role);
             }
-            if (fullName !== undefined) {
-                fields.push('full_name=?');
-                values.push(fullName);
-            }
-            if (phone !== undefined) {
-                fields.push('phone=?');
-                values.push(phone);
-            }
-            if (siteName !== undefined) {
-                fields.push('site_name=?');
-                values.push(siteName);
-            }
-            if (companyName !== undefined) {
-                fields.push('company_name=?');
-                values.push(companyName);
-            }
+            fields.push('full_name=?');
+            values.push(fullName);
+            fields.push('phone=?');
+            values.push(phone);
+            fields.push('site_name=?');
+            values.push(siteName);
+            fields.push('company_name=?');
+            values.push(companyName);
+            fields.push('extra_note=?');
+            values.push(extraNote);
             if (password) {
                 fields.push('password=?');
                 values.push(password);
             }
-
-            if (!fields.length) return res.status(400).json({ error: 'Güncellenecek alan yok' });
 
             values.push(id);
             db.run(`UPDATE users SET ${fields.join(', ')} WHERE id=?`, values, (updateErr) => {

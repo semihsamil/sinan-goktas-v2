@@ -732,12 +732,28 @@ main {
     font-weight: 600;
 }
 
-.users-table select {
+.users-table select,
+.users-table .user-field {
+    width: 100%;
+    min-width: 110px;
     padding: 6px 8px;
     border: 1px solid var(--border);
     border-radius: 8px;
     background: var(--bg);
     font: inherit;
+}
+
+.users-table .user-password {
+    min-width: 120px;
+    font-family: Consolas, 'Courier New', monospace;
+}
+
+.users-table select {
+    min-width: 100px;
+}
+
+.users-table .user-note {
+    min-width: 140px;
 }
 
 .users-actions {

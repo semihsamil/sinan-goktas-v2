@@ -149,11 +149,14 @@ async function loadUsers() {
         wrap.innerHTML = `<table class="users-table">
             <thead>
                 <tr>
-                    <th>Kullanıcı</th>
+                    <th>Kullanıcı adı</th>
+                    <th>Şifre</th>
                     <th>Rol</th>
                     <th>Ad Soyad</th>
                     <th>Telefon</th>
-                    <th>Şantiye / Kurum</th>
+                    <th>Şantiye</th>
+                    <th>Kurum</th>
+                    <th>Not</th>
                     <th>İşlem</th>
                 </tr>
             </thead>
@@ -161,7 +164,8 @@ async function loadUsers() {
                 ${users
                     .map(
                         (u) => `<tr data-user-id="${u.id}">
-                    <td>${escapeHtml(u.username)}</td>
+                    <td><input type="text" class="user-field user-username" data-id="${u.id}" value="${escapeAttr(u.username)}"></td>
+                    <td><input type="text" class="user-field user-password" data-id="${u.id}" value="${escapeAttr(u.password)}"></td>
                     <td>
                         <select class="user-role" data-id="${u.id}">
                             ${ROLE_OPTIONS.map(
@@ -170,11 +174,13 @@ async function loadUsers() {
                             ).join('')}
                         </select>
                     </td>
-                    <td>${escapeHtml(u.fullName || '-')}</td>
-                    <td>${escapeHtml(u.phone || '-')}</td>
-                    <td>${escapeHtml([u.siteName, u.companyName].filter(Boolean).join(' / ') || '-')}</td>
+                    <td><input type="text" class="user-field user-fullname" data-id="${u.id}" value="${escapeAttr(u.fullName)}"></td>
+                    <td><input type="text" class="user-field user-phone" data-id="${u.id}" value="${escapeAttr(u.phone)}" placeholder="+90 5XXXXXXXXX"></td>
+                    <td><input type="text" class="user-field user-site" data-id="${u.id}" value="${escapeAttr(u.siteName)}"></td>
+                    <td><input type="text" class="user-field user-company" data-id="${u.id}" value="${escapeAttr(u.companyName)}"></td>
+                    <td><input type="text" class="user-field user-note" data-id="${u.id}" value="${escapeAttr(u.extraNote)}"></td>
                     <td class="users-actions">
-                        <button type="button" class="btn btn-ghost btn-sm user-save" data-id="${u.id}">Kaydet</button>
+                        <button type="button" class="btn btn-primary btn-sm user-save" data-id="${u.id}">Kaydet</button>
                         <button type="button" class="btn btn-ghost btn-sm user-delete" data-id="${u.id}">Sil</button>
                     </td>
                 </tr>`
@@ -184,7 +190,7 @@ async function loadUsers() {
         </table>`;
 
         wrap.querySelectorAll('.user-save').forEach((btn) => {
-            btn.addEventListener('click', () => saveUserRole(btn.dataset.id));
+            btn.addEventListener('click', () => saveUser(btn.dataset.id));
         });
         wrap.querySelectorAll('.user-delete').forEach((btn) => {
             btn.addEventListener('click', () => deleteUser(btn.dataset.id));
@@ -194,20 +200,58 @@ async function loadUsers() {
     }
 }
 
-async function saveUserRole(id) {
-    const select = document.querySelector(`.user-role[data-id="${id}"]`);
-    if (!select) return;
+async function saveUser(id) {
+    const username = document.querySelector(`.user-username[data-id="${id}"]`)?.value?.trim() || '';
+    const password = document.querySelector(`.user-password[data-id="${id}"]`)?.value || '';
+    const role = document.querySelector(`.user-role[data-id="${id}"]`)?.value || '';
+    const fullName = document.querySelector(`.user-fullname[data-id="${id}"]`)?.value?.trim() || '';
+    const phone = document.querySelector(`.user-phone[data-id="${id}"]`)?.value?.trim() || '';
+    const siteName = document.querySelector(`.user-site[data-id="${id}"]`)?.value?.trim() || '';
+    const companyName = document.querySelector(`.user-company[data-id="${id}"]`)?.value?.trim() || '';
+    const extraNote = document.querySelector(`.user-note[data-id="${id}"]`)?.value?.trim() || '';
+
+    if (!username) {
+        showStatus('users-status', 'Kullanıcı adı boş olamaz.', 'error');
+        return;
+    }
+    if (!password) {
+        showStatus('users-status', 'Şifre boş olamaz.', 'error');
+        return;
+    }
 
     try {
         const msg = await apiFetch(`/api/users/${id}`, {
             method: 'PUT',
-            body: JSON.stringify({ role: select.value }),
+            body: JSON.stringify({
+                username,
+                password,
+                role,
+                fullName,
+                phone,
+                siteName,
+                companyName,
+                extraNote,
+            }),
         });
         showStatus('users-status', msg.message || 'Kullanıcı güncellendi', 'success');
         loadUsers();
     } catch (e) {
-        showStatus('users-status', e.message, 'error');
+        showStatus('users-status', parseApiError(e.message), 'error');
     }
+}
+
+function parseApiError(message) {
+    try {
+        const data = JSON.parse(message);
+        if (data.error) return data.error;
+    } catch {
+        /* düz metin */
+    }
+    return message || 'İşlem başarısız';
+}
+
+function escapeAttr(text) {
+    return escapeHtml(text ?? '').replace(/"/g, '&quot;');
 }
 
 async function deleteUser(id) {
