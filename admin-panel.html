@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="api-base" content="">
+    <title>Admin Paneli | Mimar Sinan Göktaş</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/api-host.js"></script>
+    <script src="js/config.js"></script>
+</head>
+<body data-page="admin">
+    <header class="site-header" id="site-header"></header>
+
+    <div class="admin-wrap">
+        <div class="admin-panel">
+            <div class="admin-panel-top">
+                <h1 class="section-title">Admin Paneli</h1>
+                <button type="button" class="btn btn-ghost" id="logout-btn">Çıkış</button>
+            </div>
+
+            <div class="admin-tabs">
+                <button type="button" class="admin-tab active" data-tab="general">Genel Bilgiler</button>
+                <button type="button" class="admin-tab" data-tab="reports">Günlük Raporlar</button>
+                <button type="button" class="admin-tab" data-tab="notes">Bilgi Notları</button>
+                <button type="button" class="admin-tab" data-tab="schedule">Çizelge</button>
+                <button type="button" class="admin-tab" data-tab="settings">İletişim &amp; Harita</button>
+            </div>
+
+            <div id="panel-general" class="tab-panel active">
+                <p class="section-lead">PDF, Word, Excel veya görsel dosyası ekleyin. Ziyaretçiler Genel Şantiye Bilgileri sayfasında indirebilir.</p>
+                <div class="form-group">
+                    <label for="file-general">Dosya seç</label>
+                    <input type="file" id="file-general" accept=".pdf,.doc,.docx,.xlsx,.xls,.txt,.png,.jpg,.jpeg">
+                </div>
+                <button type="button" class="btn btn-primary" id="upload-general">Dosya Ekle</button>
+                <div id="progress-general" class="progress-wrap">
+                    <progress value="0" max="100"></progress>
+                    <span class="progress-text">0%</span>
+                </div>
+                <p id="status-general" class="form-status"></p>
+                <h3 class="tab-subtitle">Yüklenen dosyalar</h3>
+                <div id="list-general" class="file-list">Yükleniyor...</div>
+            </div>
+
+            <div id="panel-reports" class="tab-panel">
+                <p class="section-lead">Günlük şantiye raporlarını dosya olarak yükleyin.</p>
+                <div class="form-group">
+                    <label for="file-reports">Rapor dosyası</label>
+                    <input type="file" id="file-reports" accept=".pdf,.doc,.docx,.xlsx,.xls,.txt,.png,.jpg,.jpeg">
+                </div>
+                <button type="button" class="btn btn-primary" id="upload-reports">Dosya Ekle</button>
+                <div id="progress-reports" class="progress-wrap">
+                    <progress value="0" max="100"></progress>
+                    <span class="progress-text">0%</span>
+                </div>
+                <p id="status-reports" class="form-status"></p>
+                <h3 class="tab-subtitle">Yüklenen dosyalar</h3>
+                <div id="list-reports" class="file-list">Yükleniyor...</div>
+            </div>
+
+            <div id="panel-notes" class="tab-panel">
+                <p class="section-lead">Bilgi notlarını dosya olarak ekleyin (metin yerine dosya listesi).</p>
+                <div class="form-group">
+                    <label for="file-notes">Not dosyası</label>
+                    <input type="file" id="file-notes" accept=".pdf,.doc,.docx,.xlsx,.xls,.txt,.png,.jpg,.jpeg">
+                </div>
+                <button type="button" class="btn btn-primary" id="upload-notes">Dosya Ekle</button>
+                <div id="progress-notes" class="progress-wrap">
+                    <progress value="0" max="100"></progress>
+                    <span class="progress-text">0%</span>
+                </div>
+                <p id="status-notes" class="form-status"></p>
+                <h3 class="tab-subtitle">Yüklenen dosyalar</h3>
+                <div id="list-notes" class="file-list">Yükleniyor...</div>
+            </div>
+
+            <div id="panel-schedule" class="tab-panel">
+                <p class="section-lead">Şantiye takip çizelgesini Excel veya PDF olarak yükleyin.</p>
+                <div class="form-group">
+                    <label for="file-schedule">Çizelge dosyası (önerilen: .xlsx, .pdf)</label>
+                    <input type="file" id="file-schedule" accept=".pdf,.doc,.docx,.xlsx,.xls,.txt,.png,.jpg,.jpeg">
+                </div>
+                <button type="button" class="btn btn-primary" id="upload-schedule">Dosya Ekle</button>
+                <div id="progress-schedule" class="progress-wrap">
+                    <progress value="0" max="100"></progress>
+                    <span class="progress-text">0%</span>
+                </div>
+                <p id="status-schedule" class="form-status"></p>
+                <h3 class="tab-subtitle">Yüklenen dosyalar</h3>
+                <div id="list-schedule" class="file-list">Yükleniyor...</div>
+            </div>
+
+            <div id="panel-settings" class="tab-panel">
+                <h3 class="tab-subtitle">İletişim (ana sayfa)</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="contact_email">E-posta</label>
+                        <input type="email" id="contact_email">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact_phone">Telefon</label>
+                        <input type="text" id="contact_phone">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="contact_address">Adres</label>
+                    <input type="text" id="contact_address">
+                </div>
+                <h3 class="tab-subtitle">Harita konumu</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="map_lat">Enlem</label>
+                        <input type="text" id="map_lat" placeholder="39.7477">
+                    </div>
+                    <div class="form-group">
+                        <label for="map_lng">Boylam</label>
+                        <input type="text" id="map_lng" placeholder="37.0179">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="map_label">Harita etiketi</label>
+                    <input type="text" id="map_label">
+                </div>
+                <button type="button" class="btn btn-primary" id="save-settings">Ayarları Kaydet</button>
+                <p id="settings-status" class="form-status"></p>
+            </div>
+
+            <p id="admin-status" class="form-status"></p>
+        </div>
+    </div>
+
+    <footer class="site-footer"><p>&copy; <span id="year"></span> Mimar Sinan Göktaş</p></footer>
+    <script src="js/auth.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>

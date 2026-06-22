@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giriş | Mimar Sinan Göktaş</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <meta name="api-base" content="">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/api-host.js"></script>
+    <script src="js/config.js"></script>
+</head>
+<body data-page="login">
+    <header class="site-header" id="site-header"></header>
+
+    <div class="form-card">
+        <div class="form-tabs">
+            <button type="button" class="form-tab active" data-mode="login">Giriş Yap</button>
+            <button type="button" class="form-tab" data-mode="register">Kayıt Ol</button>
+        </div>
+
+        <form id="login-form">
+            <h2 style="font-family:'Cormorant Garamond',serif;margin-bottom:1rem;">Kullanıcı Girişi</h2>
+            <div class="form-group">
+                <label for="username">Kullanıcı adı</label>
+                <input type="text" id="username" name="username" required autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label for="password">Şifre</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%">Giriş Yap</button>
+            <p id="login-status" class="form-status" role="status"></p>
+        </form>
+
+        <form id="register-form" class="hidden">
+            <h2 style="font-family:'Cormorant Garamond',serif;margin-bottom:1rem;">Kayıt</h2>
+            <div class="form-group">
+                <label for="reg-role">Kayıt tipi</label>
+                <select id="reg-role" name="reg-role" required>
+                    <option value="personel">Personel</option>
+                    <option value="is_yapilan">Kullanıcı</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="reg-username">Kullanıcı adı</label>
+                <input type="text" id="reg-username" name="reg-username" required autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label for="reg-fullname">Ad Soyad</label>
+                <input type="text" id="reg-fullname" name="reg-fullname" autocomplete="name" placeholder="Örn: Ahmet Yılmaz">
+            </div>
+            <div class="form-group">
+                <label for="reg-phone">Telefon Numarası</label>
+                <input type="text" id="reg-phone" name="reg-phone" autocomplete="tel" placeholder="+90 5XXXXXXXXX" value="+90 5" maxlength="14" inputmode="numeric">
+            </div>
+            <div class="form-group role-is-yapilan hidden" id="reg-company-group">
+                <label for="reg-company">Kurum / Firma</label>
+                <input type="text" id="reg-company" name="reg-company" placeholder="Örn: ABC İnşaat">
+            </div>
+            <div class="form-group role-is-yapilan hidden" id="reg-site-group">
+                <label for="reg-site">Şantiye Adı (varsa)</label>
+                <input type="text" id="reg-site" name="reg-site" placeholder="Örn: Sivas Merkez Konut Projesi">
+            </div>
+            <div class="form-group">
+                <label for="reg-password">Şifre</label>
+                <input type="password" id="reg-password" name="reg-password" required autocomplete="new-password">
+            </div>
+            <div class="form-group">
+                <label for="reg-password2">Şifre (Tekrar)</label>
+                <input type="password" id="reg-password2" name="reg-password2" required autocomplete="new-password">
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%">Kayıt Ol</button>
+        </form>
+    </div>
+
+    <footer class="site-footer">
+        <p>&copy; <span id="year"></span> Mimar Sinan Göktaş</p>
+    </footer>
+    <script src="js/auth.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/login.js"></script>
+</body>
+</html>

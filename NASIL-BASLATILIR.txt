@@ -1,0 +1,32 @@
+═══════════════════════════════════════════════════════
+  MİMAR SİNAN GÖKTAŞ — FİNAL SÜRÜM (sinan_goktas-v2)
+═══════════════════════════════════════════════════════
+
+KLASÖR: c:\Users\karak\Desktop\sinan_goktas-v2
+
+► EN KOLAY YOL: start.bat dosyasına çift tıkla
+   (tarayıcı otomatik açılır)
+
+► Site:     http://localhost:3000
+► Admin:    http://localhost:3000/login.html
+
+  Kullanıcı: admin
+  Şifre:     admin123
+  (.env dosyasından değiştirebilirsin)
+
+───────────────────────────────────────────────────────
+ADMIN PANELİNDE YAPILANLAR
+───────────────────────────────────────────────────────
+• Genel bilgiler — dosya ekle / sil
+• Günlük raporlar — dosya ekle / sil
+• Bilgi notları — dosya ekle / sil
+• Şantiye çizelgesi — dosya ekle / sil (Excel/PDF)
+• İletişim bilgileri (ana sayfada görünür)
+• Harita konumu (enlem/boylam)
+
+───────────────────────────────────────────────────────
+DETAYLI ANLATIM
+───────────────────────────────────────────────────────
+KURULUM.md dosyasını aç (Render yayını dahil)
+
+Eski klasör (sinan_goktas) değiştirilmedi.

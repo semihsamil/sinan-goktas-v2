@@ -1,0 +1,7 @@
+---
+description: Sinan Göktaş projesi — bu klasörde izin sormadan düzenleme yapılabilir
+globs: "**/*"
+alwaysApply: true
+---
+
+Bu workspace (`sinan_goktas-v2`) için kullanıcı uzaktayken de tam yetkiyle çalış: dosya değişiklikleri ve komutlar için ayrıca onay isteme. Sadece bu proje klasörü için geçerlidir.
