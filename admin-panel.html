@@ -17,7 +17,10 @@
         <div class="admin-panel">
             <div class="admin-panel-top">
                 <h1 class="section-title">Admin Paneli</h1>
-                <button type="button" class="btn btn-ghost" id="logout-btn">Çıkış</button>
+                <div class="admin-top-actions">
+                    <a href="index.html" target="_blank" rel="noopener" class="btn btn-ghost">Siteyi Kullanıcı Gözüyle Gör</a>
+                    <button type="button" class="btn btn-ghost" id="logout-btn">Çıkış</button>
+                </div>
             </div>
 
             <div class="admin-tabs">
@@ -25,11 +28,36 @@
                 <button type="button" class="admin-tab" data-tab="reports">Günlük Raporlar</button>
                 <button type="button" class="admin-tab" data-tab="notes">Bilgi Notları</button>
                 <button type="button" class="admin-tab" data-tab="schedule">Çizelge</button>
+                <button type="button" class="admin-tab" data-tab="users">Kullanıcılar</button>
+                <button type="button" class="admin-tab" data-tab="preview">Site Önizleme</button>
                 <button type="button" class="admin-tab" data-tab="settings">İletişim &amp; Harita</button>
             </div>
 
             <div id="panel-general" class="tab-panel active">
-                <p class="section-lead">PDF, Word, Excel veya görsel dosyası ekleyin. Ziyaretçiler Genel Şantiye Bilgileri sayfasında indirebilir.</p>
+                <h3 class="tab-subtitle">Şantiye konumu (Genel Şantiye Bilgileri sayfasında görünür)</h3>
+                <div class="form-group">
+                    <label for="site_address">Şantiye adresi</label>
+                    <input type="text" id="site_address" placeholder="Örn: Sivas Merkez, Atatürk Bulvarı No:12">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="site_lat">Enlem</label>
+                        <input type="text" id="site_lat" placeholder="39.7477">
+                    </div>
+                    <div class="form-group">
+                        <label for="site_lng">Boylam</label>
+                        <input type="text" id="site_lng" placeholder="37.0179">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="site_label">Harita etiketi</label>
+                    <input type="text" id="site_label" placeholder="Şantiye Konumu">
+                </div>
+                <button type="button" class="btn btn-primary" id="save-site-location">Şantiye Konumunu Kaydet</button>
+                <p id="site-location-status" class="form-status"></p>
+                <a href="general-info.html" target="_blank" rel="noopener" class="btn btn-ghost" style="margin-bottom:1.5rem;">Genel Şantiye Bilgileri sayfasını aç</a>
+
+                <h3 class="tab-subtitle">Dosyalar</h3>
                 <div class="form-group">
                     <label for="file-general">Dosya seç</label>
                     <input type="file" id="file-general" accept=".pdf,.doc,.docx,.xlsx,.xls,.txt,.png,.jpg,.jpeg">
@@ -90,6 +118,26 @@
                 <p id="status-schedule" class="form-status"></p>
                 <h3 class="tab-subtitle">Yüklenen dosyalar</h3>
                 <div id="list-schedule" class="file-list">Yükleniyor...</div>
+            </div>
+
+            <div id="panel-users" class="tab-panel">
+                <p class="section-lead">Kayıtlı kullanıcıları görüntüleyin, rolünü düzenleyin veya silin.</p>
+                <div id="users-list" class="users-table-wrap">Yükleniyor...</div>
+                <p id="users-status" class="form-status"></p>
+            </div>
+
+            <div id="panel-preview" class="tab-panel">
+                <p class="section-lead">Admin olarak giriş yapmış olsanız da siteyi ziyaretçi/kullanıcı gözüyle ayrı sekmede inceleyebilirsiniz.</p>
+                <div class="preview-grid">
+                    <a href="index.html" target="_blank" rel="noopener" class="preview-card">Ana Sayfa</a>
+                    <a href="general-info.html" target="_blank" rel="noopener" class="preview-card">Genel Şantiye Bilgileri</a>
+                    <a href="daily-reports.html" target="_blank" rel="noopener" class="preview-card">Günlük Raporlar</a>
+                    <a href="notes.html" target="_blank" rel="noopener" class="preview-card">Bilgi Notları</a>
+                    <a href="schedule.html" target="_blank" rel="noopener" class="preview-card">Şantiye Çizelgesi</a>
+                    <a href="map.html" target="_blank" rel="noopener" class="preview-card">Konum Haritası</a>
+                    <a href="work-tracking.html" target="_blank" rel="noopener" class="preview-card">İş Takibi</a>
+                    <a href="login.html" target="_blank" rel="noopener" class="preview-card">Giriş / Kayıt</a>
+                </div>
             </div>
 
             <div id="panel-settings" class="tab-panel">

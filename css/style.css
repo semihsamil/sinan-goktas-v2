@@ -406,12 +406,23 @@ main {
 }
 
 /* MAP */
-#map-container {
+#map-container,
+#site-map-container {
     height: 420px;
     border-radius: var(--radius);
     overflow: hidden;
     border: 1px solid var(--border);
     margin-top: 1rem;
+}
+
+.site-address-line {
+    font-size: 1.05rem;
+    color: var(--text);
+    margin: 0.5rem 0 0;
+    padding: 12px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
 }
 
 /* FORMS */
@@ -559,6 +570,73 @@ main {
     flex-wrap: wrap;
     gap: 12px;
     margin-bottom: 1.5rem;
+}
+
+.admin-top-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.preview-card {
+    display: block;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    text-align: center;
+    font-weight: 600;
+    color: var(--text);
+    text-decoration: none;
+    transition: border-color 0.2s, transform 0.2s;
+}
+
+.preview-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+
+.users-table-wrap {
+    overflow-x: auto;
+}
+
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+}
+
+.users-table th,
+.users-table td {
+    border-bottom: 1px solid var(--border);
+    padding: 10px 8px;
+    text-align: left;
+    vertical-align: middle;
+}
+
+.users-table th {
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.users-table select {
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    font: inherit;
+}
+
+.users-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
 }
 
 .tab-subtitle {

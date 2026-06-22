@@ -29,6 +29,16 @@ const DEFAULT_SETTINGS = {
     map_lat: '39.7477',
     map_lng: '37.0179',
     map_label: 'Mimar Sinan Göktaş — Sivas',
+    site_lat: '39.7477',
+    site_lng: '37.0179',
+    site_address: 'Sivas, Türkiye',
+    site_label: 'Şantiye Konumu',
+};
+
+const ROLE_LABELS = {
+    admin: 'Admin',
+    personel: 'Personel',
+    is_yapilan: 'Kullanıcı',
 };
 
 function migrateFilesTable(done) {
@@ -179,7 +189,7 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
 app.use(
     cors({
         origin: allowedOrigins,
-        methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization'],
     })
 );
@@ -391,6 +401,139 @@ app.post('/api/register', (req, res) => {
             });
         }
     );
+});
+
+app.get('/api/users', requireAuth, requireAdmin, (_req, res) => {
+    db.all(
+        `SELECT id, username, role, full_name, phone, site_name, company_name, created_at
+         FROM users ORDER BY created_at DESC`,
+        [],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: 'Kullanıcılar okunamadı' });
+            res.json(
+                (rows || []).map((u) => ({
+                    id: u.id,
+                    username: u.username,
+                    role: u.role || 'personel',
+                    roleLabel: ROLE_LABELS[u.role] || u.role,
+                    fullName: u.full_name || '',
+                    phone: u.phone || '',
+                    siteName: u.site_name || '',
+                    companyName: u.company_name || '',
+                    createdAt: u.created_at || '',
+                }))
+            );
+        }
+    );
+});
+
+app.put('/api/users/:id', requireAuth, requireAdmin, (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ error: 'Geçersiz id' });
+
+    const role = String(req.body?.role || '').trim();
+    const fullName = String(req.body?.fullName || '').trim();
+    const phone = String(req.body?.phone || '').trim();
+    const siteName = String(req.body?.siteName || '').trim();
+    const companyName = String(req.body?.companyName || '').trim();
+    const password = String(req.body?.password || '');
+
+    if (role && !VALID_ROLES.includes(role)) {
+        return res.status(400).json({ error: 'Geçersiz rol' });
+    }
+    if (phone && !/^\+90 5\d{9}$/.test(phone)) {
+        return res.status(400).json({ error: 'Telefon formatı +90 5XXXXXXXXX olmalı' });
+    }
+
+    db.get('SELECT id, username, role FROM users WHERE id=?', [id], (err, user) => {
+        if (err || !user) return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
+
+        if (user.role === 'admin' && role && role !== 'admin') {
+            db.get("SELECT COUNT(*) AS c FROM users WHERE role='admin'", [], (countErr, row) => {
+                if (countErr) return res.status(500).json({ error: 'Güncelleme hatası' });
+                if ((row?.c || 0) <= 1) {
+                    return res.status(400).json({ error: 'Son admin kullanıcısının rolü değiştirilemez' });
+                }
+                updateUserRecord();
+            });
+            return;
+        }
+
+        updateUserRecord();
+
+        function updateUserRecord() {
+            const fields = [];
+            const values = [];
+
+            if (role) {
+                fields.push('role=?');
+                values.push(role);
+            }
+            if (fullName !== undefined) {
+                fields.push('full_name=?');
+                values.push(fullName);
+            }
+            if (phone !== undefined) {
+                fields.push('phone=?');
+                values.push(phone);
+            }
+            if (siteName !== undefined) {
+                fields.push('site_name=?');
+                values.push(siteName);
+            }
+            if (companyName !== undefined) {
+                fields.push('company_name=?');
+                values.push(companyName);
+            }
+            if (password) {
+                fields.push('password=?');
+                values.push(password);
+            }
+
+            if (!fields.length) return res.status(400).json({ error: 'Güncellenecek alan yok' });
+
+            values.push(id);
+            db.run(`UPDATE users SET ${fields.join(', ')} WHERE id=?`, values, (updateErr) => {
+                if (updateErr) return res.status(500).json({ error: 'Güncelleme hatası' });
+                bumpSync();
+                res.json({ ok: true, message: 'Kullanıcı güncellendi' });
+            });
+        }
+    });
+});
+
+app.delete('/api/users/:id', requireAuth, requireAdmin, (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ error: 'Geçersiz id' });
+
+    if (req.session.userId === id) {
+        return res.status(400).json({ error: 'Oturum açtığınız kullanıcı silinemez' });
+    }
+
+    db.get('SELECT id, role FROM users WHERE id=?', [id], (err, user) => {
+        if (err || !user) return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
+
+        if (user.role === 'admin') {
+            db.get("SELECT COUNT(*) AS c FROM users WHERE role='admin'", [], (countErr, row) => {
+                if (countErr) return res.status(500).json({ error: 'Silme hatası' });
+                if ((row?.c || 0) <= 1) {
+                    return res.status(400).json({ error: 'Son admin kullanıcısı silinemez' });
+                }
+                removeUser();
+            });
+            return;
+        }
+
+        removeUser();
+
+        function removeUser() {
+            db.run('DELETE FROM users WHERE id=?', [id], (delErr) => {
+                if (delErr) return res.status(500).json({ error: 'Silme hatası' });
+                bumpSync();
+                res.json({ ok: true, message: 'Kullanıcı silindi' });
+            });
+        }
+    });
 });
 
 app.get('/api/me', requireAuth, (req, res) => {
