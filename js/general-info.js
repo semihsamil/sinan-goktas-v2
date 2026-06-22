@@ -1,43 +1,38 @@
-let siteMap;
-
-document.addEventListener('DOMContentLoaded', async () => {
-    const addressEl = document.getElementById('site-address-line');
-    const container = document.getElementById('site-map-container');
-    if (!container || typeof L === 'undefined') return;
-
-    let lat = 39.7477;
-    let lng = 37.0179;
-    let label = 'Şantiye Konumu';
-    let address = '';
+async function loadConstructionSites() {
+    const listEl = document.getElementById('sites-list');
+    if (!listEl) return;
 
     try {
-        const s = await fetch(apiUrl('/api/settings')).then((r) => r.json());
-        lat = parseFloat(s.site_lat) || lat;
-        lng = parseFloat(s.site_lng) || lng;
-        label = s.site_label || label;
-        address = s.site_address || '';
+        const sites = await fetch(apiUrl('/api/construction-sites')).then((r) => r.json());
+
+        if (!sites.length) {
+            listEl.innerHTML = '<p class="content-box empty">Henüz kayıtlı şantiye yok.</p>';
+            return;
+        }
+
+        listEl.innerHTML = `<ul class="sites-list-items">${sites
+            .map(
+                (site) => `<li class="sites-list-item">
+                    <div class="sites-list-info">
+                        <strong class="sites-list-name">${escapeHtml(site.name)}</strong>
+                        ${site.address ? `<span class="sites-list-address">${escapeHtml(site.address)}</span>` : ''}
+                    </div>
+                    <a href="site-detail.html?id=${site.id}" class="btn btn-primary btn-sm">Görüntüle</a>
+                </li>`
+            )
+            .join('')}</ul>`;
     } catch {
-        /* varsayılan */
+        listEl.innerHTML = '<p class="form-status error">Şantiye listesi yüklenemedi.</p>';
     }
-
-    if (addressEl) {
-        addressEl.textContent = address || 'Şantiye adresi henüz girilmemiş.';
-    }
-
-    siteMap = L.map('site-map-container').setView([lat, lng], 14);
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap',
-        maxZoom: 19,
-    }).addTo(siteMap);
-
-    L.marker([lat, lng]).addTo(siteMap).bindPopup(`<strong>${escapeHtml(label)}</strong>`).openPopup();
-
-    setTimeout(() => siteMap.invalidateSize(), 300);
-});
+}
 
 function escapeHtml(text) {
     const d = document.createElement('div');
     d.textContent = text ?? '';
     return d.innerHTML;
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadConstructionSites();
+    setInterval(loadConstructionSites, 15000);
+});

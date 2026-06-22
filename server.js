@@ -124,6 +124,86 @@ function ensureUsersColumns(done) {
     });
 }
 
+function migrateConstructionSitesTable(done) {
+    db.run(
+        `CREATE TABLE IF NOT EXISTS construction_sites (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            address TEXT,
+            phone TEXT,
+            lat TEXT,
+            lng TEXT,
+            description TEXT,
+            created_at TEXT
+        )`,
+        (createErr) => {
+            if (createErr) return done(createErr);
+            db.get('SELECT COUNT(*) AS c FROM construction_sites', [], (countErr, row) => {
+                if (countErr) return done(countErr);
+                if ((row?.c || 0) > 0) return done();
+
+                getSettings((settingsErr, settings) => {
+                    if (settingsErr) return done(settingsErr);
+                    const name = settings.site_label || 'Şantiye Konumu';
+                    const hasData =
+                        (settings.site_address && settings.site_address.trim()) ||
+                        (settings.site_lat && settings.site_lat.trim());
+                    if (!hasData) return done();
+
+                    db.run(
+                        `INSERT INTO construction_sites (name, address, phone, lat, lng, description, created_at)
+                         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                        [
+                            name,
+                            settings.site_address || '',
+                            '',
+                            settings.site_lat || '39.7477',
+                            settings.site_lng || '37.0179',
+                            '',
+                            new Date().toISOString(),
+                        ],
+                        done
+                    );
+                });
+            });
+        }
+    );
+}
+
+function mapConstructionSite(row) {
+    return {
+        id: row.id,
+        name: row.name || '',
+        address: row.address || '',
+        phone: row.phone || '',
+        lat: row.lat || '',
+        lng: row.lng || '',
+        description: row.description || '',
+        createdAt: row.created_at || '',
+    };
+}
+
+function validateConstructionSiteBody(body, isCreate) {
+    const name = String(body?.name || '').trim();
+    const address = String(body?.address || '').trim();
+    const phone = String(body?.phone || '').trim();
+    const lat = String(body?.lat || '').trim().replace(',', '.');
+    const lng = String(body?.lng || '').trim().replace(',', '.');
+    const description = String(body?.description || '').trim();
+
+    if (isCreate && !name) return { error: 'Şantiye adı zorunlu' };
+    if (name && (name.length < 2 || name.length > 100)) {
+        return { error: 'Şantiye adı 2-100 karakter olmalı' };
+    }
+    if (address.length > 200) return { error: 'Adres en fazla 200 karakter olabilir' };
+    if (phone.length > 30) return { error: 'Telefon en fazla 30 karakter olabilir' };
+    if (description.length > 500) return { error: 'Açıklama en fazla 500 karakter olabilir' };
+    if (lat && Number.isNaN(parseFloat(lat))) return { error: 'Geçerli enlem girin' };
+    if (lng && Number.isNaN(parseFloat(lng))) return { error: 'Geçerli boylam girin' };
+
+    return { name, address, phone, lat, lng, description };
+}
+
 function broadcastSync() {
     const payload = `data: ${JSON.stringify({
         version: syncVersion,
@@ -154,6 +234,9 @@ db.serialize(() => {
     });
     migrateUsersTable((migrateErr) => {
         if (migrateErr) console.error('Kullanıcı tablosu migration hatası:', migrateErr.message);
+    });
+    migrateConstructionSitesTable((migrateErr) => {
+        if (migrateErr) console.error('Şantiye tablosu migration hatası:', migrateErr.message);
     });
 
     Object.entries(DEFAULT_SETTINGS).forEach(([key, value]) => {
@@ -303,6 +386,99 @@ app.post('/api/settings', requireAuth, requireAdmin, (req, res) => {
         if (err) return res.status(500).send('Kayıt hatası');
         bumpSync();
         res.send('Ayarlar kaydedildi');
+    });
+});
+
+app.get('/api/construction-sites', (_req, res) => {
+    db.all(
+        'SELECT id, name, address FROM construction_sites ORDER BY name COLLATE NOCASE',
+        [],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: 'Şantiyeler okunamadı' });
+            res.json(
+                (rows || []).map((r) => ({
+                    id: r.id,
+                    name: r.name || '',
+                    address: r.address || '',
+                }))
+            );
+        }
+    );
+});
+
+app.get('/api/construction-sites/:id', (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ error: 'Geçersiz id' });
+    db.get('SELECT * FROM construction_sites WHERE id=?', [id], (err, row) => {
+        if (err) return res.status(500).json({ error: 'Şantiye okunamadı' });
+        if (!row) return res.status(404).json({ error: 'Şantiye bulunamadı' });
+        res.json(mapConstructionSite(row));
+    });
+});
+
+app.post('/api/construction-sites', requireAuth, requireAdmin, (req, res) => {
+    const validated = validateConstructionSiteBody(req.body, true);
+    if (validated.error) return res.status(400).json({ error: validated.error });
+
+    db.run(
+        `INSERT INTO construction_sites (name, address, phone, lat, lng, description, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+            validated.name,
+            validated.address,
+            validated.phone,
+            validated.lat,
+            validated.lng,
+            validated.description,
+            new Date().toISOString(),
+        ],
+        function insertSite(err) {
+            if (err) return res.status(500).json({ error: 'Şantiye eklenemedi' });
+            bumpSync();
+            res.json({ ok: true, id: this.lastID, message: 'Şantiye eklendi' });
+        }
+    );
+});
+
+app.put('/api/construction-sites/:id', requireAuth, requireAdmin, (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ error: 'Geçersiz id' });
+
+    const validated = validateConstructionSiteBody(req.body, false);
+    if (validated.error) return res.status(400).json({ error: validated.error });
+    if (!validated.name) return res.status(400).json({ error: 'Şantiye adı zorunlu' });
+
+    db.run(
+        `UPDATE construction_sites
+         SET name=?, address=?, phone=?, lat=?, lng=?, description=?
+         WHERE id=?`,
+        [
+            validated.name,
+            validated.address,
+            validated.phone,
+            validated.lat,
+            validated.lng,
+            validated.description,
+            id,
+        ],
+        function updateSite(err) {
+            if (err) return res.status(500).json({ error: 'Şantiye güncellenemedi' });
+            if (this.changes === 0) return res.status(404).json({ error: 'Şantiye bulunamadı' });
+            bumpSync();
+            res.json({ ok: true, message: 'Şantiye güncellendi' });
+        }
+    );
+});
+
+app.delete('/api/construction-sites/:id', requireAuth, requireAdmin, (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ error: 'Geçersiz id' });
+
+    db.run('DELETE FROM construction_sites WHERE id=?', [id], function deleteSite(err) {
+        if (err) return res.status(500).json({ error: 'Şantiye silinemedi' });
+        if (this.changes === 0) return res.status(404).json({ error: 'Şantiye bulunamadı' });
+        bumpSync();
+        res.json({ ok: true, message: 'Şantiye silindi' });
     });
 });
 

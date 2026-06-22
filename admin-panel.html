@@ -34,27 +34,47 @@
             </div>
 
             <div id="panel-general" class="tab-panel active">
-                <h3 class="tab-subtitle">Şantiye konumu (Genel Şantiye Bilgileri sayfasında görünür)</h3>
-                <div class="form-group">
-                    <label for="site_address">Şantiye adresi</label>
-                    <input type="text" id="site_address" placeholder="Örn: Sivas Merkez, Atatürk Bulvarı No:12">
-                </div>
-                <div class="form-row">
+                <h3 class="tab-subtitle">Şantiyeler (Genel Şantiye Bilgileri sayfasında listelenir)</h3>
+                <p class="section-lead">Her şantiye için ayrı adres, telefon ve harita koordinatı girebilirsiniz. Koordinatları elle yazın (ör. 39.7477 / 37.0179).</p>
+
+                <div id="admin-sites-list" class="admin-sites-list">Yükleniyor...</div>
+
+                <div class="admin-site-form-wrap">
+                    <h4 class="tab-subtitle" id="site-form-title">Yeni şantiye ekle</h4>
+                    <input type="hidden" id="site_edit_id" value="">
                     <div class="form-group">
-                        <label for="site_lat">Enlem</label>
-                        <input type="text" id="site_lat" placeholder="39.7477">
+                        <label for="site_name">Şantiye adı *</label>
+                        <input type="text" id="site_name" placeholder="Örn: Merkez Kaba İnşaat Şantiyesi">
                     </div>
                     <div class="form-group">
-                        <label for="site_lng">Boylam</label>
-                        <input type="text" id="site_lng" placeholder="37.0179">
+                        <label for="site_address">Adres</label>
+                        <input type="text" id="site_address" placeholder="Örn: Sivas Merkez, Atatürk Bulvarı No:12">
                     </div>
+                    <div class="form-group">
+                        <label for="site_phone">Telefon</label>
+                        <input type="text" id="site_phone" placeholder="Örn: +90 346 000 00 00">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="site_lat">Enlem</label>
+                            <input type="text" id="site_lat" placeholder="39.7477">
+                        </div>
+                        <div class="form-group">
+                            <label for="site_lng">Boylam</label>
+                            <input type="text" id="site_lng" placeholder="37.0179">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="site_description">Açıklama</label>
+                        <textarea id="site_description" rows="3" placeholder="Şantiye hakkında kısa bilgi (isteğe bağlı)"></textarea>
+                    </div>
+                    <div class="admin-site-form-actions">
+                        <button type="button" class="btn btn-primary" id="save-construction-site">Kaydet</button>
+                        <button type="button" class="btn btn-ghost" id="cancel-construction-site" hidden>İptal</button>
+                    </div>
+                    <p id="site-location-status" class="form-status"></p>
                 </div>
-                <div class="form-group">
-                    <label for="site_label">Harita etiketi</label>
-                    <input type="text" id="site_label" placeholder="Şantiye Konumu">
-                </div>
-                <button type="button" class="btn btn-primary" id="save-site-location">Şantiye Konumunu Kaydet</button>
-                <p id="site-location-status" class="form-status"></p>
+
                 <a href="general-info.html" target="_blank" rel="noopener" class="btn btn-ghost" style="margin-bottom:1.5rem;">Genel Şantiye Bilgileri sayfasını aç</a>
 
                 <h3 class="tab-subtitle">Dosyalar</h3>

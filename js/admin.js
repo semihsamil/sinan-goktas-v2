@@ -34,13 +34,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('map_lat').value = settings.map_lat || '';
         document.getElementById('map_lng').value = settings.map_lng || '';
         document.getElementById('map_label').value = settings.map_label || '';
-        document.getElementById('site_address').value = settings.site_address || '';
-        document.getElementById('site_lat').value = settings.site_lat || '';
-        document.getElementById('site_lng').value = settings.site_lng || '';
-        document.getElementById('site_label').value = settings.site_label || '';
     } catch (e) {
         showStatus('admin-status', 'Ayarlar yüklenemedi: ' + e.message, 'error');
     }
+
+    loadConstructionSitesAdmin();
 
     FILE_PANELS.forEach((panel) => {
         loadFileList(panel.listId, panel.category, true);
@@ -49,22 +47,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     attachSyncListeners();
 
-    document.getElementById('save-site-location')?.addEventListener('click', async () => {
-        try {
-            const msg = await apiFetch('/api/settings', {
-                method: 'POST',
-                body: JSON.stringify({
-                    site_address: document.getElementById('site_address').value,
-                    site_lat: document.getElementById('site_lat').value,
-                    site_lng: document.getElementById('site_lng').value,
-                    site_label: document.getElementById('site_label').value,
-                }),
-            });
-            showStatus('site-location-status', msg, 'success');
-        } catch (e) {
-            showStatus('site-location-status', e.message, 'error');
-        }
-    });
+    document.getElementById('save-construction-site')?.addEventListener('click', saveConstructionSite);
+    document.getElementById('cancel-construction-site')?.addEventListener('click', resetConstructionSiteForm);
 
     document.getElementById('save-settings')?.addEventListener('click', async () => {
         try {
@@ -244,8 +228,138 @@ function escapeHtml(text) {
     return d.innerHTML;
 }
 
+function getConstructionSiteFormData() {
+    return {
+        name: document.getElementById('site_name')?.value?.trim() || '',
+        address: document.getElementById('site_address')?.value?.trim() || '',
+        phone: document.getElementById('site_phone')?.value?.trim() || '',
+        lat: document.getElementById('site_lat')?.value?.trim() || '',
+        lng: document.getElementById('site_lng')?.value?.trim() || '',
+        description: document.getElementById('site_description')?.value?.trim() || '',
+    };
+}
+
+function resetConstructionSiteForm() {
+    document.getElementById('site_edit_id').value = '';
+    document.getElementById('site_name').value = '';
+    document.getElementById('site_address').value = '';
+    document.getElementById('site_phone').value = '';
+    document.getElementById('site_lat').value = '';
+    document.getElementById('site_lng').value = '';
+    document.getElementById('site_description').value = '';
+    document.getElementById('site-form-title').textContent = 'Yeni şantiye ekle';
+    document.getElementById('cancel-construction-site').hidden = true;
+    showStatus('site-location-status', '', '');
+}
+
+function fillConstructionSiteForm(site) {
+    document.getElementById('site_edit_id').value = site.id;
+    document.getElementById('site_name').value = site.name || '';
+    document.getElementById('site_address').value = site.address || '';
+    document.getElementById('site_phone').value = site.phone || '';
+    document.getElementById('site_lat').value = site.lat || '';
+    document.getElementById('site_lng').value = site.lng || '';
+    document.getElementById('site_description').value = site.description || '';
+    document.getElementById('site-form-title').textContent = 'Şantiyeyi düzenle';
+    document.getElementById('cancel-construction-site').hidden = false;
+    document.getElementById('site_name')?.focus();
+}
+
+async function loadConstructionSitesAdmin() {
+    const wrap = document.getElementById('admin-sites-list');
+    if (!wrap) return;
+
+    wrap.innerHTML = 'Yükleniyor...';
+    try {
+        const sites = await fetch(apiUrl('/api/construction-sites')).then((r) => r.json());
+        if (!sites.length) {
+            wrap.innerHTML = '<p class="content-box empty">Henüz şantiye eklenmemiş.</p>';
+            return;
+        }
+
+        wrap.innerHTML = `<ul class="admin-sites-items">${sites
+            .map(
+                (site) => `<li class="admin-sites-item">
+                    <div>
+                        <strong>${escapeHtml(site.name)}</strong>
+                        ${site.address ? `<span>${escapeHtml(site.address)}</span>` : ''}
+                    </div>
+                    <div class="admin-sites-actions">
+                        <button type="button" class="btn btn-ghost btn-sm site-edit" data-id="${site.id}">Düzenle</button>
+                        <button type="button" class="btn btn-ghost btn-sm site-delete" data-id="${site.id}">Sil</button>
+                    </div>
+                </li>`
+            )
+            .join('')}</ul>`;
+
+        wrap.querySelectorAll('.site-edit').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                try {
+                    const site = await fetch(apiUrl(`/api/construction-sites/${btn.dataset.id}`)).then((r) => {
+                        if (!r.ok) throw new Error('Şantiye okunamadı');
+                        return r.json();
+                    });
+                    fillConstructionSiteForm(site);
+                } catch (e) {
+                    showStatus('site-location-status', e.message, 'error');
+                }
+            });
+        });
+
+        wrap.querySelectorAll('.site-delete').forEach((btn) => {
+            btn.addEventListener('click', () => deleteConstructionSite(btn.dataset.id));
+        });
+    } catch (e) {
+        wrap.innerHTML = `<p class="form-status error">${escapeHtml(e.message)}</p>`;
+    }
+}
+
+async function saveConstructionSite() {
+    const editId = document.getElementById('site_edit_id')?.value?.trim();
+    const body = getConstructionSiteFormData();
+
+    if (!body.name) {
+        showStatus('site-location-status', 'Şantiye adı zorunlu.', 'error');
+        return;
+    }
+
+    try {
+        const result = editId
+            ? await apiFetch(`/api/construction-sites/${editId}`, {
+                  method: 'PUT',
+                  body: JSON.stringify(body),
+              })
+            : await apiFetch('/api/construction-sites', {
+                  method: 'POST',
+                  body: JSON.stringify(body),
+              });
+
+        showStatus('site-location-status', result.message || 'Kaydedildi', 'success');
+        resetConstructionSiteForm();
+        loadConstructionSitesAdmin();
+    } catch (e) {
+        showStatus('site-location-status', e.message, 'error');
+    }
+}
+
+async function deleteConstructionSite(id) {
+    if (!confirm('Bu şantiyeyi silmek istiyor musunuz?')) return;
+
+    try {
+        const result = await apiFetch(`/api/construction-sites/${id}`, { method: 'DELETE' });
+        showStatus('site-location-status', result.message || 'Şantiye silindi', 'success');
+        if (document.getElementById('site_edit_id')?.value === String(id)) {
+            resetConstructionSiteForm();
+        }
+        loadConstructionSitesAdmin();
+    } catch (e) {
+        showStatus('site-location-status', e.message, 'error');
+    }
+}
+
 function refreshAllLists() {
     FILE_PANELS.forEach((panel) => loadFileList(panel.listId, panel.category, true));
+    loadConstructionSitesAdmin();
     const usersPanel = document.getElementById('panel-users');
     if (usersPanel?.classList.contains('active')) loadUsers();
 }

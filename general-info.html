@@ -7,7 +7,6 @@
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
     <meta name="api-base" content="">
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
     <script src="js/api-host.js"></script>
     <script src="js/config.js"></script>
 </head>
@@ -19,9 +18,9 @@
     </div>
     <main class="section">
         <div class="section-card">
-            <h2 class="section-title">Şantiye Konumu</h2>
-            <p class="site-address-line" id="site-address-line">Yükleniyor...</p>
-            <div id="site-map-container"></div>
+            <h2 class="section-title">Şantiyeler</h2>
+            <p class="section-lead">Detayları görmek için şantiye adının yanındaki Görüntüle düğmesine tıklayın.</p>
+            <div id="sites-list" class="sites-list">Yükleniyor...</div>
         </div>
 
         <div class="section-card">
@@ -31,7 +30,6 @@
     </main>
     <footer class="site-footer"><p>&copy; <span id="year"></span> Mimar Sinan Göktaş</p></footer>
     <script src="js/app.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script src="js/general-info.js"></script>
 </body>
 </html>

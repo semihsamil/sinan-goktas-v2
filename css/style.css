@@ -425,6 +425,113 @@ main {
     border-radius: 10px;
 }
 
+.sites-list-items,
+.admin-sites-items {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.sites-list-item,
+.admin-sites-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg);
+}
+
+.sites-list-info,
+.admin-sites-item > div:first-child {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.sites-list-name {
+    font-size: 1.05rem;
+}
+
+.sites-list-address,
+.admin-sites-item span {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.admin-sites-list {
+    margin-bottom: 1.5rem;
+}
+
+.admin-sites-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.admin-site-form-wrap {
+    margin-bottom: 1.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+}
+
+.admin-site-form-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.site-detail-back {
+    margin: 0 0 1rem;
+}
+
+.site-detail-meta {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.site-detail-meta li {
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+}
+
+.site-detail-meta strong {
+    display: block;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+}
+
+.site-detail-description {
+    margin: 0;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+.form-group textarea {
+    width: 100%;
+    min-height: 90px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font: inherit;
+    resize: vertical;
+    background: var(--surface);
+    color: var(--text);
+}
+
 /* FORMS */
 .form-card {
     max-width: 480px;
