@@ -14,6 +14,9 @@ const ROLE_OPTIONS = [
 document.addEventListener('DOMContentLoaded', async () => {
     if (!requireAdminPage()) return;
 
+    InputFilters.attachMobilePhoneFields(document);
+    InputFilters.attachTextNameFields(document);
+
     const tabs = document.querySelectorAll('.admin-tab');
     const panels = document.querySelectorAll('.tab-panel');
 
@@ -29,7 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         const settings = await fetch(apiUrl('/api/settings')).then((r) => r.json());
         document.getElementById('contact_email').value = settings.contact_email || '';
-        document.getElementById('contact_phone').value = settings.contact_phone || '';
+        document.getElementById('contact_phone').value = InputFilters.toMobilePhoneFieldValue(settings.contact_phone);
         document.getElementById('contact_address').value = settings.contact_address || '';
         document.getElementById('map_lat').value = settings.map_lat || '';
         document.getElementById('map_lng').value = settings.map_lng || '';
@@ -51,12 +54,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('cancel-construction-site')?.addEventListener('click', resetConstructionSiteForm);
 
     document.getElementById('save-settings')?.addEventListener('click', async () => {
+        const contactPhone = InputFilters.normalizeMobilePhone(document.getElementById('contact_phone').value);
+        const phoneErr = InputFilters.validateMobilePhone(contactPhone, true);
+        if (phoneErr) {
+            showStatus('settings-status', phoneErr, 'error');
+            return;
+        }
+
         try {
             const msg = await apiFetch('/api/settings', {
                 method: 'POST',
                 body: JSON.stringify({
                     contact_email: document.getElementById('contact_email').value,
-                    contact_phone: document.getElementById('contact_phone').value,
+                    contact_phone: contactPhone,
                     contact_address: document.getElementById('contact_address').value,
                     map_lat: document.getElementById('map_lat').value,
                     map_lng: document.getElementById('map_lng').value,
@@ -174,10 +184,10 @@ async function loadUsers() {
                             ).join('')}
                         </select>
                     </td>
-                    <td><input type="text" class="user-field user-fullname" data-id="${u.id}" value="${escapeAttr(u.fullName)}"></td>
-                    <td><input type="text" class="user-field user-phone" data-id="${u.id}" value="${escapeAttr(u.phone)}" placeholder="+90 5XXXXXXXXX"></td>
-                    <td><input type="text" class="user-field user-site" data-id="${u.id}" value="${escapeAttr(u.siteName)}"></td>
-                    <td><input type="text" class="user-field user-company" data-id="${u.id}" value="${escapeAttr(u.companyName)}"></td>
+                    <td><input type="text" class="user-field user-fullname" data-id="${u.id}" value="${escapeAttr(u.fullName)}" data-text-name></td>
+                    <td><input type="text" class="user-field user-phone" data-id="${u.id}" value="${escapeAttr(u.phone)}" placeholder="+90 5XXXXXXXXX" data-mobile-phone data-mobile-phone-optional="1"></td>
+                    <td><input type="text" class="user-field user-site" data-id="${u.id}" value="${escapeAttr(u.siteName)}" data-text-name></td>
+                    <td><input type="text" class="user-field user-company" data-id="${u.id}" value="${escapeAttr(u.companyName)}" data-text-name></td>
                     <td><input type="text" class="user-field user-note" data-id="${u.id}" value="${escapeAttr(u.extraNote)}"></td>
                     <td class="users-actions">
                         <button type="button" class="btn btn-primary btn-sm user-save" data-id="${u.id}">Kaydet</button>
@@ -194,6 +204,12 @@ async function loadUsers() {
         });
         wrap.querySelectorAll('.user-delete').forEach((btn) => {
             btn.addEventListener('click', () => deleteUser(btn.dataset.id));
+        });
+
+        InputFilters.attachMobilePhoneFields(wrap);
+        InputFilters.attachTextNameFields(wrap);
+        wrap.querySelectorAll('.user-phone').forEach((input) => {
+            input.value = InputFilters.toMobilePhoneFieldValue(input.value);
         });
     } catch (e) {
         wrap.innerHTML = `<p class="form-status error">${escapeHtml(e.message)}</p>`;
@@ -219,6 +235,27 @@ async function saveUser(id) {
         return;
     }
 
+    const nameErr = InputFilters.validateTextName(fullName, 'Ad soyad');
+    if (nameErr) {
+        showStatus('users-status', nameErr, 'error');
+        return;
+    }
+    const phoneErr = InputFilters.validateMobilePhone(phone, false);
+    if (phoneErr) {
+        showStatus('users-status', phoneErr, 'error');
+        return;
+    }
+    const siteErr = InputFilters.validateTextName(siteName, 'Şantiye adı');
+    if (siteErr) {
+        showStatus('users-status', siteErr, 'error');
+        return;
+    }
+    const companyErr = InputFilters.validateTextName(companyName, 'Kurum / firma');
+    if (companyErr) {
+        showStatus('users-status', companyErr, 'error');
+        return;
+    }
+
     try {
         const msg = await apiFetch(`/api/users/${id}`, {
             method: 'PUT',
@@ -227,7 +264,7 @@ async function saveUser(id) {
                 password,
                 role,
                 fullName,
-                phone,
+                phone: InputFilters.mobilePhoneForSave(phone),
                 siteName,
                 companyName,
                 extraNote,
@@ -276,7 +313,7 @@ function getConstructionSiteFormData() {
     return {
         name: document.getElementById('site_name')?.value?.trim() || '',
         address: document.getElementById('site_address')?.value?.trim() || '',
-        phone: document.getElementById('site_phone')?.value?.trim() || '',
+        phone: InputFilters.mobilePhoneForSave(document.getElementById('site_phone')?.value),
         lat: document.getElementById('site_lat')?.value?.trim() || '',
         lng: document.getElementById('site_lng')?.value?.trim() || '',
         description: document.getElementById('site_description')?.value?.trim() || '',
@@ -287,7 +324,7 @@ function resetConstructionSiteForm() {
     document.getElementById('site_edit_id').value = '';
     document.getElementById('site_name').value = '';
     document.getElementById('site_address').value = '';
-    document.getElementById('site_phone').value = '';
+    document.getElementById('site_phone').value = InputFilters.MOBILE_PHONE_PREFIX;
     document.getElementById('site_lat').value = '';
     document.getElementById('site_lng').value = '';
     document.getElementById('site_description').value = '';
@@ -300,7 +337,7 @@ function fillConstructionSiteForm(site) {
     document.getElementById('site_edit_id').value = site.id;
     document.getElementById('site_name').value = site.name || '';
     document.getElementById('site_address').value = site.address || '';
-    document.getElementById('site_phone').value = site.phone || '';
+    document.getElementById('site_phone').value = InputFilters.toMobilePhoneFieldValue(site.phone);
     document.getElementById('site_lat').value = site.lat || '';
     document.getElementById('site_lng').value = site.lng || '';
     document.getElementById('site_description').value = site.description || '';
@@ -364,6 +401,19 @@ async function saveConstructionSite() {
 
     if (!body.name) {
         showStatus('site-location-status', 'Şantiye adı zorunlu.', 'error');
+        return;
+    }
+
+    const nameErr = InputFilters.validateTextName(body.name, 'Şantiye adı', true);
+    if (nameErr) {
+        showStatus('site-location-status', nameErr, 'error');
+        return;
+    }
+
+    const phoneRaw = document.getElementById('site_phone')?.value || '';
+    const phoneErr = InputFilters.validateMobilePhone(phoneRaw, false);
+    if (phoneErr) {
+        showStatus('site-location-status', phoneErr, 'error');
         return;
     }
 

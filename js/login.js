@@ -15,6 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const companyGroup = document.getElementById('reg-company-group');
     const siteGroup = document.getElementById('reg-site-group');
 
+    InputFilters.attachMobilePhoneFields(registerForm);
+    InputFilters.attachTextNameFields(registerForm);
+
     const applyRegisterRoleUi = () => {
         const role = roleSelect?.value || 'personel';
         if (!companyInput || !siteInput || !companyGroup || !siteGroup) return;
@@ -33,26 +36,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const normalizePhone = () => {
-        if (!phoneInput) return;
-        const prefix = '+90 5';
-        const raw = phoneInput.value || '';
-        const digitsOnly = raw.replace(/\D/g, '');
-        let rest = '';
-        if (digitsOnly.startsWith('905')) {
-            rest = digitsOnly.slice(3);
-        } else if (digitsOnly.startsWith('5')) {
-            rest = digitsOnly.slice(1);
-        } else {
-            rest = digitsOnly;
-        }
-        rest = rest.slice(0, 9);
-        phoneInput.value = prefix + rest;
-    };
-
-    phoneInput?.addEventListener('input', normalizePhone);
-    phoneInput?.addEventListener('blur', normalizePhone);
-    normalizePhone();
     roleSelect?.addEventListener('change', applyRegisterRoleUi);
     applyRegisterRoleUi();
 
@@ -115,8 +98,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (password !== password2) {
                 throw new Error('Şifreler uyuşmuyor');
             }
-            if (!/^\+90 5\d{9}$/.test(phone)) {
-                throw new Error('Telefon formatı +90 5XXXXXXXXX olmalı');
+
+            const phoneErr = InputFilters.validateMobilePhone(phone, true);
+            if (phoneErr) throw new Error(phoneErr);
+
+            const nameErr = InputFilters.validateTextName(fullName, 'Ad soyad');
+            if (nameErr) throw new Error(nameErr);
+
+            if (role === 'is_yapilan') {
+                const siteErr = InputFilters.validateTextName(siteName, 'Şantiye adı');
+                if (siteErr) throw new Error(siteErr);
+                const companyErr = InputFilters.validateTextName(companyName, 'Kurum / firma');
+                if (companyErr) throw new Error(companyErr);
             }
 
             const data = await fetch(apiUrl('/api/register'), {
@@ -140,6 +133,8 @@ document.addEventListener('DOMContentLoaded', () => {
             statusEl.textContent = data.message || 'Kayıt başarılı. Giriş yapabilirsiniz.';
             statusEl.className = 'form-status success';
             registerForm.reset();
+            if (phoneInput) phoneInput.value = InputFilters.MOBILE_PHONE_PREFIX;
+            applyRegisterRoleUi();
         } catch (err) {
             statusEl.textContent = err.message;
             statusEl.className = 'form-status error';

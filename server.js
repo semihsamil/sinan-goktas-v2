@@ -24,7 +24,7 @@ const db = new sqlite3.Database(path.join(ROOT, 'database.db'));
 
 const DEFAULT_SETTINGS = {
     contact_email: 'info@mimarsinangoktas.com',
-    contact_phone: '+90 346 000 00 00',
+    contact_phone: '+90 5555555555',
     contact_address: 'Sivas, Türkiye',
     map_lat: '39.7477',
     map_lng: '37.0179',
@@ -170,6 +170,41 @@ function migrateConstructionSitesTable(done) {
     );
 }
 
+const MOBILE_PHONE_PREFIX = '+90 5';
+const MOBILE_PHONE_REGEX = /^\+90 5\d{9}$/;
+
+function validateTextNameOptional(value, fieldLabel) {
+    const trimmed = String(value || '').trim();
+    if (!trimmed) return null;
+    if (trimmed.length < 2 || trimmed.length > 80) {
+        return { error: `${fieldLabel} 2-80 karakter olmalı` };
+    }
+    if (/\d/.test(trimmed)) {
+        return { error: `${fieldLabel} alanına rakam yazılamaz` };
+    }
+    return null;
+}
+
+function validateMobilePhoneOptional(phone) {
+    const trimmed = String(phone || '').trim();
+    if (!trimmed || trimmed === MOBILE_PHONE_PREFIX) return null;
+    if (!MOBILE_PHONE_REGEX.test(trimmed)) {
+        return { error: 'Telefon formatı +90 5XXXXXXXXX olmalı' };
+    }
+    return null;
+}
+
+function validateMobilePhoneRequired(phone) {
+    const trimmed = String(phone || '').trim();
+    if (!trimmed || trimmed === MOBILE_PHONE_PREFIX) {
+        return { error: 'Telefon zorunlu' };
+    }
+    if (!MOBILE_PHONE_REGEX.test(trimmed)) {
+        return { error: 'Telefon formatı +90 5XXXXXXXXX olmalı' };
+    }
+    return null;
+}
+
 function mapConstructionSite(row) {
     return {
         id: row.id,
@@ -195,8 +230,11 @@ function validateConstructionSiteBody(body, isCreate) {
     if (name && (name.length < 2 || name.length > 100)) {
         return { error: 'Şantiye adı 2-100 karakter olmalı' };
     }
+    const nameErr = validateTextNameOptional(name, 'Şantiye adı');
+    if (nameErr) return nameErr;
     if (address.length > 200) return { error: 'Adres en fazla 200 karakter olabilir' };
-    if (phone.length > 30) return { error: 'Telefon en fazla 30 karakter olabilir' };
+    const phoneErr = validateMobilePhoneOptional(phone);
+    if (phoneErr) return phoneErr;
     if (description.length > 500) return { error: 'Açıklama en fazla 500 karakter olabilir' };
     if (lat && Number.isNaN(parseFloat(lat))) return { error: 'Geçerli enlem girin' };
     if (lng && Number.isNaN(parseFloat(lng))) return { error: 'Geçerli boylam girin' };
@@ -382,6 +420,16 @@ app.post('/api/settings', requireAuth, requireAdmin, (req, res) => {
     const body = req.body || {};
     const pairs = Object.entries(body).filter(([k]) => k in DEFAULT_SETTINGS);
     if (!pairs.length) return res.status(400).send('Güncellenecek ayar yok');
+
+    const email = String(body.contact_email || '').trim();
+    if (body.contact_email !== undefined) {
+        if (!email || !email.includes('@') || email.length > 120) {
+            return res.status(400).send('Geçerli bir e-posta adresi girin');
+        }
+    }
+    const phoneErr = body.contact_phone !== undefined ? validateMobilePhoneRequired(body.contact_phone) : null;
+    if (phoneErr) return res.status(400).send(phoneErr.error);
+
     saveSettings(pairs, (err) => {
         if (err) return res.status(500).send('Kayıt hatası');
         bumpSync();
@@ -547,14 +595,19 @@ app.post('/api/register', (req, res) => {
     if (fullName && (fullName.length < 2 || fullName.length > 80)) {
         return res.status(400).json({ error: 'Ad soyad 2-80 karakter olmalı' });
     }
-    if (!/^\+90 5\d{9}$/.test(phone)) {
-        return res.status(400).json({ error: 'Telefon formatı +90 5XXXXXXXXX olmalı' });
-    }
+    const fullNameErr = validateTextNameOptional(fullName, 'Ad soyad');
+    if (fullNameErr) return res.status(400).json(fullNameErr);
+    const phoneErr = validateMobilePhoneRequired(phone);
+    if (phoneErr) return res.status(400).json(phoneErr);
     const companyName = role === 'is_yapilan' ? companyNameRaw : '';
     const siteName = role === 'is_yapilan' ? siteNameRaw : '';
     if (siteName.length > 80 || companyName.length > 80) {
         return res.status(400).json({ error: 'Şantiye/Kurum adı en fazla 80 karakter olabilir' });
     }
+    const siteNameErr = validateTextNameOptional(siteName, 'Şantiye adı');
+    if (siteNameErr) return res.status(400).json(siteNameErr);
+    const companyNameErr = validateTextNameOptional(companyName, 'Kurum / firma');
+    if (companyNameErr) return res.status(400).json(companyNameErr);
 
     db.run(
         `INSERT INTO users
@@ -632,12 +685,17 @@ app.put('/api/users/:id', requireAuth, requireAdmin, (req, res) => {
     if (fullName && (fullName.length < 2 || fullName.length > 80)) {
         return res.status(400).json({ error: 'Ad soyad 2-80 karakter olmalı' });
     }
-    if (phone && !/^\+90 5\d{9}$/.test(phone)) {
-        return res.status(400).json({ error: 'Telefon formatı +90 5XXXXXXXXX olmalı' });
-    }
+    const fullNameErr = validateTextNameOptional(fullName, 'Ad soyad');
+    if (fullNameErr) return res.status(400).json(fullNameErr);
+    const phoneErr = validateMobilePhoneOptional(phone);
+    if (phoneErr) return res.status(400).json(phoneErr);
     if (siteName.length > 80 || companyName.length > 80) {
         return res.status(400).json({ error: 'Şantiye/Kurum adı en fazla 80 karakter olabilir' });
     }
+    const siteNameErr = validateTextNameOptional(siteName, 'Şantiye adı');
+    if (siteNameErr) return res.status(400).json(siteNameErr);
+    const companyNameErr = validateTextNameOptional(companyName, 'Kurum / firma');
+    if (companyNameErr) return res.status(400).json(companyNameErr);
     if (extraNote.length > 200) {
         return res.status(400).json({ error: 'Not en fazla 200 karakter olabilir' });
     }
