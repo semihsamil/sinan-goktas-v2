@@ -178,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (page === 'home') loadContactInfo();
 
     const category = PAGE_CATEGORY[page];
-    if (category) {
+    if (category && page !== 'schedule') {
         loadFileList('file-list', category, false);
         setInterval(() => loadFileList('file-list', category, false), 15000);
     }

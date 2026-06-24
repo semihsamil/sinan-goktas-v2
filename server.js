@@ -205,6 +205,73 @@ function validateMobilePhoneRequired(phone) {
     return null;
 }
 
+function todayDateOnly() {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+}
+
+function parseDateOnly(value) {
+    const d = new Date(String(value || '').trim());
+    if (Number.isNaN(d.getTime())) return null;
+    d.setHours(0, 0, 0, 0);
+    return d;
+}
+
+function validateFutureOrTodayDate(value, fieldLabel, required = false) {
+    const trimmed = String(value || '').trim();
+    if (!trimmed) {
+        return required ? { error: `${fieldLabel} zorunlu` } : null;
+    }
+    const d = parseDateOnly(trimmed);
+    if (!d) return { error: `${fieldLabel} geçerli bir tarih olmalı` };
+    if (d < todayDateOnly()) return { error: `${fieldLabel} geçmiş bir tarih olamaz` };
+    return null;
+}
+
+function generateInvoiceNo(userId) {
+    const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    return `FTR-${stamp}-${userId}-${Math.floor(Math.random() * 900 + 100)}`;
+}
+
+function migrateFilesSiteId(done) {
+    db.all('PRAGMA table_info(files)', [], (err, cols) => {
+        if (err) return done(err);
+        if ((cols || []).some((c) => c.name === 'site_id')) return done();
+        db.run('ALTER TABLE files ADD COLUMN site_id INTEGER', done);
+    });
+}
+
+function migratePersonnelScheduleTable(done) {
+    db.run(
+        `CREATE TABLE IF NOT EXISTS personnel_schedule (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            salary_day TEXT,
+            leave_day TEXT,
+            note TEXT,
+            created_at TEXT
+        )`,
+        done
+    );
+}
+
+function migrateSalaryPaymentsTable(done) {
+    db.run(
+        `CREATE TABLE IF NOT EXISTS salary_payments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            amount REAL NOT NULL,
+            payment_date TEXT NOT NULL,
+            invoice_no TEXT,
+            payment_type TEXT DEFAULT 'salary',
+            note TEXT,
+            created_at TEXT
+        )`,
+        done
+    );
+}
+
 function mapConstructionSite(row) {
     return {
         id: row.id,
@@ -275,6 +342,15 @@ db.serialize(() => {
     });
     migrateConstructionSitesTable((migrateErr) => {
         if (migrateErr) console.error('Şantiye tablosu migration hatası:', migrateErr.message);
+    });
+    migrateFilesSiteId((migrateErr) => {
+        if (migrateErr) console.error('Dosya site_id migration hatası:', migrateErr.message);
+    });
+    migratePersonnelScheduleTable((migrateErr) => {
+        if (migrateErr) console.error('Çizelge tablosu migration hatası:', migrateErr.message);
+    });
+    migrateSalaryPaymentsTable((migrateErr) => {
+        if (migrateErr) console.error('Maaş tablosu migration hatası:', migrateErr.message);
     });
 
     Object.entries(DEFAULT_SETTINGS).forEach(([key, value]) => {
@@ -849,6 +925,182 @@ app.post('/api/logout', requireAuth, (req, res) => {
     res.json({ ok: true });
 });
 
+app.get('/api/personnel-schedule', (_req, res) => {
+    db.all(
+        `SELECT ps.id, ps.user_id, ps.salary_day, ps.leave_day, ps.note, ps.created_at,
+                u.full_name, u.username
+         FROM personnel_schedule ps
+         LEFT JOIN users u ON u.id = ps.user_id
+         ORDER BY ps.salary_day ASC, u.full_name ASC`,
+        [],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: 'Çizelge okunamadı' });
+            res.json(
+                (rows || []).map((r) => ({
+                    id: r.id,
+                    userId: r.user_id,
+                    fullName: r.full_name || r.username || '',
+                    username: r.username || '',
+                    salaryDay: r.salary_day || '',
+                    leaveDay: r.leave_day || '',
+                    note: r.note || '',
+                    createdAt: r.created_at || '',
+                }))
+            );
+        }
+    );
+});
+
+app.post('/api/personnel-schedule', requireAuth, requireAdmin, (req, res) => {
+    const userId = parseInt(req.body?.userId, 10);
+    const salaryDay = String(req.body?.salaryDay || '').trim();
+    const leaveDay = String(req.body?.leaveDay || '').trim();
+    const note = String(req.body?.note || '').trim();
+
+    if (!userId) return res.status(400).json({ error: 'Personel seçin' });
+
+    db.get('SELECT id, role FROM users WHERE id=?', [userId], (userErr, user) => {
+        if (userErr || !user) return res.status(404).json({ error: 'Personel bulunamadı' });
+        if (user.role !== 'personel') {
+            return res.status(400).json({ error: 'Çizelgeye yalnızca personel rolü eklenebilir' });
+        }
+
+        const salaryErr = validateFutureOrTodayDate(salaryDay, 'Maaş günü', true);
+        if (salaryErr) return res.status(400).json(salaryErr);
+        const leaveErr = validateFutureOrTodayDate(leaveDay, 'İzin günü', false);
+        if (leaveErr) return res.status(400).json(leaveErr);
+        if (note.length > 200) return res.status(400).json({ error: 'Not en fazla 200 karakter olabilir' });
+
+        db.run(
+            `INSERT INTO personnel_schedule (user_id, salary_day, leave_day, note, created_at)
+             VALUES (?, ?, ?, ?, ?)`,
+            [userId, salaryDay, leaveDay, note, new Date().toISOString()],
+            function insertCb(err) {
+                if (err) return res.status(500).json({ error: 'Kayıt eklenemedi' });
+                bumpSync();
+                res.json({ ok: true, id: this.lastID, message: 'Çizelge kaydı eklendi' });
+            }
+        );
+    });
+});
+
+app.put('/api/personnel-schedule/:id', requireAuth, requireAdmin, (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ error: 'Geçersiz id' });
+
+    const salaryDay = String(req.body?.salaryDay || '').trim();
+    const leaveDay = String(req.body?.leaveDay || '').trim();
+    const note = String(req.body?.note || '').trim();
+
+    const salaryErr = validateFutureOrTodayDate(salaryDay, 'Maaş günü', true);
+    if (salaryErr) return res.status(400).json(salaryErr);
+    const leaveErr = validateFutureOrTodayDate(leaveDay, 'İzin günü', false);
+    if (leaveErr) return res.status(400).json(leaveErr);
+    if (note.length > 200) return res.status(400).json({ error: 'Not en fazla 200 karakter olabilir' });
+
+    db.run(
+        'UPDATE personnel_schedule SET salary_day=?, leave_day=?, note=? WHERE id=?',
+        [salaryDay, leaveDay, note, id],
+        function updateCb(err) {
+            if (err) return res.status(500).json({ error: 'Güncellenemedi' });
+            if (this.changes === 0) return res.status(404).json({ error: 'Kayıt bulunamadı' });
+            bumpSync();
+            res.json({ ok: true, message: 'Çizelge güncellendi' });
+        }
+    );
+});
+
+app.delete('/api/personnel-schedule/:id', requireAuth, requireAdmin, (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ error: 'Geçersiz id' });
+    db.run('DELETE FROM personnel_schedule WHERE id=?', [id], function delCb(err) {
+        if (err) return res.status(500).json({ error: 'Silinemedi' });
+        if (this.changes === 0) return res.status(404).json({ error: 'Kayıt bulunamadı' });
+        bumpSync();
+        res.json({ ok: true, message: 'Kayıt silindi' });
+    });
+});
+
+app.get('/api/users/:id/payments', requireAuth, requireAdmin, (req, res) => {
+    const userId = parseInt(req.params.id, 10);
+    if (!userId) return res.status(400).json({ error: 'Geçersiz id' });
+    db.all(
+        `SELECT id, amount, payment_date, invoice_no, payment_type, note, created_at
+         FROM salary_payments WHERE user_id=? ORDER BY created_at DESC`,
+        [userId],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: 'Ödemeler okunamadı' });
+            res.json(rows || []);
+        }
+    );
+});
+
+app.post('/api/users/:id/salary-payment', requireAuth, requireAdmin, (req, res) => {
+    const userId = parseInt(req.params.id, 10);
+    const amount = parseFloat(req.body?.amount);
+    const paymentDate = String(req.body?.paymentDate || '').trim();
+    const note = String(req.body?.note || '').trim();
+
+    if (!userId) return res.status(400).json({ error: 'Geçersiz id' });
+    if (!amount || amount <= 0) return res.status(400).json({ error: 'Geçerli bir tutar girin' });
+    const dateErr = validateFutureOrTodayDate(paymentDate, 'Ödeme tarihi', true);
+    if (dateErr) return res.status(400).json(dateErr);
+
+    db.get('SELECT id, role FROM users WHERE id=?', [userId], (userErr, user) => {
+        if (userErr || !user) return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
+        if (user.role !== 'personel') {
+            return res.status(400).json({ error: 'Maaş ödemesi yalnızca personel için yapılabilir' });
+        }
+
+        db.run(
+            `INSERT INTO salary_payments (user_id, amount, payment_date, payment_type, note, created_at)
+             VALUES (?, ?, ?, 'salary', ?, ?)`,
+            [userId, amount, paymentDate, note, new Date().toISOString()],
+            function payCb(err) {
+                if (err) return res.status(500).json({ error: 'Ödeme kaydedilemedi' });
+                bumpSync();
+                res.json({ ok: true, message: 'Maaş ödemesi kaydedildi', id: this.lastID });
+            }
+        );
+    });
+});
+
+app.post('/api/users/:id/invoice', requireAuth, requireAdmin, (req, res) => {
+    const userId = parseInt(req.params.id, 10);
+    const amount = parseFloat(req.body?.amount);
+    const issueDate = String(req.body?.issueDate || '').trim();
+    const note = String(req.body?.note || '').trim();
+
+    if (!userId) return res.status(400).json({ error: 'Geçersiz id' });
+    if (!amount || amount <= 0) return res.status(400).json({ error: 'Geçerli bir tutar girin' });
+    const dateErr = validateFutureOrTodayDate(issueDate, 'Fatura tarihi', true);
+    if (dateErr) return res.status(400).json(dateErr);
+
+    db.get('SELECT id, role, full_name FROM users WHERE id=?', [userId], (userErr, user) => {
+        if (userErr || !user) return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
+        if (user.role !== 'personel') {
+            return res.status(400).json({ error: 'Fatura yalnızca personel için kesilebilir' });
+        }
+
+        const invoiceNo = generateInvoiceNo(userId);
+        db.run(
+            `INSERT INTO salary_payments (user_id, amount, payment_date, invoice_no, payment_type, note, created_at)
+             VALUES (?, ?, ?, ?, 'invoice', ?, ?)`,
+            [userId, amount, issueDate, invoiceNo, note, new Date().toISOString()],
+            function invCb(err) {
+                if (err) return res.status(500).json({ error: 'Fatura kaydedilemedi' });
+                bumpSync();
+                res.json({
+                    ok: true,
+                    message: `Fatura kesildi: ${invoiceNo}`,
+                    invoiceNo,
+                    id: this.lastID,
+                });
+            }
+        );
+    });
+});
+
 app.post('/upload', requireAuth, requireAdmin, (req, res) => {
     upload.single('file')(req, res, (err) => {
         if (err) return res.status(400).send(err.message || 'Yükleme hatası');
@@ -859,15 +1111,29 @@ app.post('/upload', requireAuth, requireAdmin, (req, res) => {
             return res.status(400).send('Geçersiz kategori');
         }
 
-        db.run(
-            'INSERT INTO files (filename, originalname, upload_date, category) VALUES (?, ?, ?, ?)',
-            [req.file.filename, req.file.originalname, new Date().toISOString(), category],
-            (dbErr) => {
-                if (dbErr) return res.status(500).send('Veritabanı hatası');
-                bumpSync();
-                res.send('Dosya yüklendi');
-            }
-        );
+        const siteIdRaw = req.body.site_id ?? req.body.siteId;
+        const siteId = siteIdRaw ? parseInt(siteIdRaw, 10) : null;
+        if (category === 'general') {
+            if (!siteId) return res.status(400).send('Şantiye seçimi zorunlu');
+            db.get('SELECT id FROM construction_sites WHERE id=?', [siteId], (siteErr, siteRow) => {
+                if (siteErr || !siteRow) return res.status(400).send('Geçersiz şantiye');
+                insertFileRecord(siteId);
+            });
+            return;
+        }
+        insertFileRecord(null);
+
+        function insertFileRecord(siteIdValue) {
+            db.run(
+                'INSERT INTO files (filename, originalname, upload_date, category, site_id) VALUES (?, ?, ?, ?, ?)',
+                [req.file.filename, req.file.originalname, new Date().toISOString(), category, siteIdValue],
+                (dbErr) => {
+                    if (dbErr) return res.status(500).send('Veritabanı hatası');
+                    bumpSync();
+                    res.send('Dosya yüklendi');
+                }
+            );
+        }
     });
 });
 
@@ -888,14 +1154,24 @@ app.delete('/api/files/:id', requireAuth, requireAdmin, (req, res) => {
 
 app.get('/files', (req, res) => {
     const category = (req.query.category || '').trim();
+    const siteId = parseInt(req.query.site_id || req.query.siteId || '', 10);
     if (category && !VALID_CATEGORIES.includes(category)) {
         return res.status(400).send('Geçersiz kategori');
     }
 
-    const sql = category
-        ? 'SELECT * FROM files WHERE category = ? ORDER BY upload_date DESC'
-        : 'SELECT * FROM files ORDER BY upload_date DESC';
-    const params = category ? [category] : [];
+    let sql = 'SELECT * FROM files';
+    const params = [];
+    const clauses = [];
+    if (category) {
+        clauses.push('category = ?');
+        params.push(category);
+    }
+    if (siteId) {
+        clauses.push('site_id = ?');
+        params.push(siteId);
+    }
+    if (clauses.length) sql += ` WHERE ${clauses.join(' AND ')}`;
+    sql += ' ORDER BY upload_date DESC';
 
     db.all(sql, params, (err, rows) => {
         if (err) return res.status(500).send('Veritabanı hatası');

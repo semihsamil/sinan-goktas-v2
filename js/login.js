@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     if (getToken()) {
         const user = getUser();
-        window.location.href = user?.role === 'admin' ? 'admin-panel.html' : 'work-tracking.html';
+        window.location.replace(user?.role === 'admin' ? 'admin-panel.html' : 'work-tracking.html');
         return;
     }
 
@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             setToken(data.token);
             setUser({ username: data.username, role: data.role || 'personel', fullName: data.fullName || '' });
-            window.location.href = data.role === 'admin' ? 'admin-panel.html' : 'work-tracking.html';
+            window.location.replace(data.role === 'admin' ? 'admin-panel.html' : 'work-tracking.html');
         } catch (err) {
             statusEl.textContent = err.message;
             statusEl.className = 'form-status error';

@@ -1,8 +1,6 @@
 const FILE_PANELS = [
-    { category: 'general', inputId: 'file-general', uploadId: 'upload-general', statusId: 'status-general', listId: 'list-general', progressId: 'progress-general' },
     { category: 'reports', inputId: 'file-reports', uploadId: 'upload-reports', statusId: 'status-reports', listId: 'list-reports', progressId: 'progress-reports' },
     { category: 'notes', inputId: 'file-notes', uploadId: 'upload-notes', statusId: 'status-notes', listId: 'list-notes', progressId: 'progress-notes' },
-    { category: 'schedule', inputId: 'file-schedule', uploadId: 'upload-schedule', statusId: 'status-schedule', listId: 'list-schedule', progressId: 'progress-schedule' },
 ];
 
 const ROLE_OPTIONS = [
@@ -26,6 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             tabs.forEach((t) => t.classList.toggle('active', t === tab));
             panels.forEach((p) => p.classList.toggle('active', p.id === `panel-${name}`));
             if (name === 'users') loadUsers();
+            if (name === 'schedule') loadScheduleAdmin();
         });
     });
 
@@ -49,6 +48,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     attachSyncListeners();
+    initScheduleAdminPanel();
+    initPayrollModal();
 
     document.getElementById('save-construction-site')?.addEventListener('click', saveConstructionSite);
     document.getElementById('cancel-construction-site')?.addEventListener('click', resetConstructionSiteForm);
@@ -168,6 +169,7 @@ async function loadUsers() {
                     <th>Kurum</th>
                     <th>Not</th>
                     <th>İşlem</th>
+                    <th>Maaş / Fatura</th>
                 </tr>
             </thead>
             <tbody>
@@ -193,6 +195,10 @@ async function loadUsers() {
                         <button type="button" class="btn btn-primary btn-sm user-save" data-id="${u.id}">Kaydet</button>
                         <button type="button" class="btn btn-ghost btn-sm user-delete" data-id="${u.id}">Sil</button>
                     </td>
+                    <td class="users-payroll">${u.role === 'personel'
+                        ? `<button type="button" class="btn btn-primary btn-sm user-pay" data-id="${u.id}" data-name="${escapeAttr(u.fullName || u.username)}">Maaş Öde</button>
+                           <button type="button" class="btn btn-ghost btn-sm user-invoice" data-id="${u.id}" data-name="${escapeAttr(u.fullName || u.username)}">Fatura Kes</button>`
+                        : '<span class="text-muted">—</span>'}</td>
                 </tr>`
                     )
                     .join('')}
@@ -204,6 +210,12 @@ async function loadUsers() {
         });
         wrap.querySelectorAll('.user-delete').forEach((btn) => {
             btn.addEventListener('click', () => deleteUser(btn.dataset.id));
+        });
+        wrap.querySelectorAll('.user-pay').forEach((btn) => {
+            btn.addEventListener('click', () => openPayrollModal(btn.dataset.id, btn.dataset.name, 'salary'));
+        });
+        wrap.querySelectorAll('.user-invoice').forEach((btn) => {
+            btn.addEventListener('click', () => openPayrollModal(btn.dataset.id, btn.dataset.name, 'invoice'));
         });
 
         InputFilters.attachMobilePhoneFields(wrap);
@@ -366,6 +378,7 @@ async function loadConstructionSitesAdmin() {
                         ${site.address ? `<span>${escapeHtml(site.address)}</span>` : ''}
                     </div>
                     <div class="admin-sites-actions">
+                        <a href="site-detail.html?id=${site.id}" class="btn btn-primary btn-sm">Detay / Dosyalar</a>
                         <button type="button" class="btn btn-ghost btn-sm site-edit" data-id="${site.id}">Düzenle</button>
                         <button type="button" class="btn btn-ghost btn-sm site-delete" data-id="${site.id}">Sil</button>
                     </div>
@@ -454,8 +467,187 @@ async function deleteConstructionSite(id) {
 function refreshAllLists() {
     FILE_PANELS.forEach((panel) => loadFileList(panel.listId, panel.category, true));
     loadConstructionSitesAdmin();
+    loadScheduleAdmin();
     const usersPanel = document.getElementById('panel-users');
     if (usersPanel?.classList.contains('active')) loadUsers();
+}
+
+let personnelOptionsCache = [];
+
+async function loadPersonnelOptions() {
+    if (personnelOptionsCache.length) return personnelOptionsCache;
+    const users = await apiFetch('/api/users');
+    personnelOptionsCache = users.filter((u) => u.role === 'personel');
+    return personnelOptionsCache;
+}
+
+function resetScheduleForm() {
+    document.getElementById('schedule_edit_id').value = '';
+    document.getElementById('schedule_salary_day').value = '';
+    document.getElementById('schedule_leave_day').value = '';
+    document.getElementById('schedule_note').value = '';
+    const userSelect = document.getElementById('schedule_user');
+    if (userSelect) userSelect.disabled = false;
+}
+
+async function populateScheduleUserSelect(selectedId) {
+    const select = document.getElementById('schedule_user');
+    if (!select) return;
+    const personnel = await loadPersonnelOptions();
+    select.innerHTML = personnel.length
+        ? personnel.map((p) => `<option value="${p.id}">${escapeHtml(p.fullName || p.username)}</option>`).join('')
+        : '<option value="">Personel yok</option>';
+    if (selectedId) select.value = String(selectedId);
+}
+
+async function loadScheduleAdmin() {
+    const grid = document.getElementById('schedule-grid');
+    if (!grid) return;
+    try {
+        const rows = await ScheduleUi.fetchPersonnelSchedule();
+        ScheduleUi.renderScheduleGrid(grid, rows, {
+            admin: true,
+            onDelete: deleteScheduleRow,
+            onEdit: editScheduleRow,
+        });
+    } catch (e) {
+        grid.innerHTML = `<p class="form-status error">${escapeHtml(e.message)}</p>`;
+    }
+}
+
+function initScheduleAdminPanel() {
+    const form = document.getElementById('schedule-add-form');
+    const toggleBtn = document.getElementById('schedule-add-toggle');
+    const cancelBtn = document.getElementById('schedule-cancel');
+    const saveBtn = document.getElementById('schedule-save');
+
+    toggleBtn?.addEventListener('click', async () => {
+        resetScheduleForm();
+        await populateScheduleUserSelect();
+        if (form) form.hidden = false;
+        ScheduleUi.applyMinDateInputs(form || document);
+    });
+
+    cancelBtn?.addEventListener('click', () => {
+        if (form) form.hidden = true;
+        resetScheduleForm();
+    });
+
+    saveBtn?.addEventListener('click', saveScheduleRow);
+    ScheduleUi.applyMinDateInputs(document);
+    loadScheduleAdmin();
+}
+
+async function saveScheduleRow() {
+    const editId = document.getElementById('schedule_edit_id')?.value?.trim();
+    const userId = document.getElementById('schedule_user')?.value;
+    const salaryDay = document.getElementById('schedule_salary_day')?.value;
+    const leaveDay = document.getElementById('schedule_leave_day')?.value || '';
+    const note = document.getElementById('schedule_note')?.value?.trim() || '';
+
+    if (!userId) {
+        showStatus('schedule-status', 'Personel seçin.', 'error');
+        return;
+    }
+
+    try {
+        const body = { userId, salaryDay, leaveDay, note };
+        const result = editId
+            ? await apiFetch(`/api/personnel-schedule/${editId}`, { method: 'PUT', body: JSON.stringify(body) })
+            : await apiFetch('/api/personnel-schedule', { method: 'POST', body: JSON.stringify(body) });
+
+        showStatus('schedule-status', result.message || 'Kaydedildi', 'success');
+        document.getElementById('schedule-add-form').hidden = true;
+        resetScheduleForm();
+        personnelOptionsCache = [];
+        loadScheduleAdmin();
+    } catch (e) {
+        showStatus('schedule-status', parseApiError(e.message), 'error');
+    }
+}
+
+async function deleteScheduleRow(id) {
+    if (!confirm('Bu çizelge kaydını silmek istiyor musunuz?')) return;
+    try {
+        const result = await apiFetch(`/api/personnel-schedule/${id}`, { method: 'DELETE' });
+        showStatus('schedule-status', result.message || 'Silindi', 'success');
+        loadScheduleAdmin();
+    } catch (e) {
+        showStatus('schedule-status', parseApiError(e.message), 'error');
+    }
+}
+
+async function editScheduleRow(id, rows) {
+    const row = rows.find((r) => String(r.id) === String(id));
+    if (!row) return;
+    document.getElementById('schedule_edit_id').value = row.id;
+    await populateScheduleUserSelect(row.userId);
+    const userSelect = document.getElementById('schedule_user');
+    if (userSelect) userSelect.disabled = true;
+    document.getElementById('schedule_salary_day').value = row.salaryDay || '';
+    document.getElementById('schedule_leave_day').value = row.leaveDay || '';
+    document.getElementById('schedule_note').value = row.note || '';
+    const form = document.getElementById('schedule-add-form');
+    if (form) {
+        form.hidden = false;
+        ScheduleUi.applyMinDateInputs(form);
+    }
+}
+
+function openPayrollModal(userId, userName, mode) {
+    const modal = document.getElementById('payroll-modal');
+    if (!modal) return;
+    document.getElementById('payroll_user_id').value = userId;
+    document.getElementById('payroll_mode').value = mode;
+    document.getElementById('payroll-modal-title').textContent = mode === 'invoice' ? 'Fatura Kes' : 'Maaş Öde';
+    document.getElementById('payroll-modal-user').textContent = userName || '';
+    document.getElementById('payroll_amount').value = '';
+    document.getElementById('payroll_date').value = ScheduleUi.getTodayMinDate();
+    document.getElementById('payroll_note').value = '';
+    document.getElementById('payroll-modal-status').textContent = '';
+    ScheduleUi.applyMinDateInputs(modal);
+    modal.hidden = false;
+}
+
+function closePayrollModal() {
+    const modal = document.getElementById('payroll-modal');
+    if (modal) modal.hidden = true;
+}
+
+function initPayrollModal() {
+    document.getElementById('payroll-cancel')?.addEventListener('click', closePayrollModal);
+    document.getElementById('payroll-modal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'payroll-modal') closePayrollModal();
+    });
+    document.getElementById('payroll-submit')?.addEventListener('click', async () => {
+        const userId = document.getElementById('payroll_user_id').value;
+        const mode = document.getElementById('payroll_mode').value;
+        const amount = parseFloat(document.getElementById('payroll_amount').value);
+        const paymentDate = document.getElementById('payroll_date').value;
+        const note = document.getElementById('payroll_note').value.trim();
+        const statusEl = document.getElementById('payroll-modal-status');
+
+        if (!amount || amount <= 0) {
+            statusEl.textContent = 'Geçerli bir tutar girin.';
+            statusEl.className = 'form-status error';
+            return;
+        }
+
+        try {
+            const path = mode === 'invoice' ? `/api/users/${userId}/invoice` : `/api/users/${userId}/salary-payment`;
+            const body =
+                mode === 'invoice'
+                    ? { amount, issueDate: paymentDate, note }
+                    : { amount, paymentDate, note };
+            const result = await apiFetch(path, { method: 'POST', body: JSON.stringify(body) });
+            statusEl.textContent = result.message || 'Kaydedildi';
+            statusEl.className = 'form-status success';
+            setTimeout(closePayrollModal, 900);
+        } catch (e) {
+            statusEl.textContent = parseApiError(e.message);
+            statusEl.className = 'form-status error';
+        }
+    });
 }
 
 function attachSyncListeners() {

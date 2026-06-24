@@ -11,7 +11,7 @@
     <script src="js/api-host.js"></script>
     <script src="js/config.js"></script>
 </head>
-<body data-page="general">
+<body data-page="site-detail">
     <header class="site-header" id="site-header"></header>
     <div class="page-hero">
         <h1 id="site-title">Şantiye Detayı</h1>
@@ -40,10 +40,30 @@
                 <p class="site-address-line" id="site-address-line"></p>
                 <div id="site-map-container"></div>
             </div>
+
+            <div class="section-card">
+                <h2 class="section-title">Şantiye Dosyaları</h2>
+                <p class="section-lead">Bu şantiyeye ait genel bilgi dosyaları. İndirmek için dosya adına tıklayın.</p>
+                <div id="site-file-list">Yükleniyor...</div>
+                <div id="site-file-admin" class="site-file-admin" hidden>
+                    <h3 class="tab-subtitle">Dosya Ekle (Admin)</h3>
+                    <div class="form-group">
+                        <label for="site-file-input">Dosya seç</label>
+                        <input type="file" id="site-file-input" accept=".pdf,.doc,.docx,.xlsx,.xls,.txt,.png,.jpg,.jpeg">
+                    </div>
+                    <button type="button" class="btn btn-primary" id="site-file-upload">Dosya Ekle</button>
+                    <div id="site-file-progress" class="progress-wrap">
+                        <progress value="0" max="100"></progress>
+                        <span class="progress-text">0%</span>
+                    </div>
+                    <p id="site-file-status" class="form-status"></p>
+                </div>
+            </div>
         </div>
     </main>
     <footer class="site-footer"><p>&copy; <span id="year"></span> Mimar Sinan Göktaş</p></footer>
     <script src="js/app.js"></script>
+    <script src="js/auth.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script src="js/site-detail.js"></script>
 </body>
