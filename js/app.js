@@ -6,6 +6,7 @@ const NAV_ITEMS = [
     { href: 'work-tracking.html', label: 'İş Takibi', id: 'work' },
     { href: 'schedule.html', label: 'Şantiye Çizelgesi', id: 'schedule' },
     { href: 'map.html', label: 'Konum Haritası', id: 'map' },
+    { href: 'kullanim-kilavuzu.html', label: 'Kullanım Kılavuzu', id: 'guide' },
 ];
 
 const PAGE_CATEGORY = {

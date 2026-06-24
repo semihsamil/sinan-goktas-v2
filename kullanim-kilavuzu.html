@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kullanım Kılavuzu | Mimar Sinan Göktaş</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <meta name="api-base" content="">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/api-host.js"></script>
+    <script src="js/config.js"></script>
+</head>
+<body data-page="guide">
+    <header class="site-header" id="site-header"></header>
+
+    <div class="page-hero">
+        <h1>Kullanım Kılavuzu</h1>
+        <p>Siteyi ilk kez kullananlar için adım adım rehber</p>
+    </div>
+
+    <main class="section guide-page">
+        <div class="guide-layout">
+            <nav class="guide-toc section-card" aria-label="Kılavuz içindekiler">
+                <h2 class="section-title">İçindekiler</h2>
+                <ul>
+                    <li><a href="#baslangic">1. Başlangıç</a></li>
+                    <li><a href="#menu">2. Menü ve gezinme</a></li>
+                    <li><a href="#sayfalar">3. Sayfalar ne işe yarar?</a></li>
+                    <li><a href="#ziyaretci">4. Giriş yapmadan kullanım</a></li>
+                    <li><a href="#kayit">5. Kayıt olma</a></li>
+                    <li><a href="#giris">6. Giriş yapma</a></li>
+                    <li><a href="#admin">7. Admin paneli</a></li>
+                    <li><a href="#hatalar">8. Sık görülen uyarılar</a></li>
+                </ul>
+            </nav>
+
+            <div class="guide-content">
+                <section id="baslangic" class="section-card guide-block">
+                    <h2 class="section-title">1. Başlangıç</h2>
+                    <p class="section-lead">Bu site, Mimar Sinan Göktaş ofisinin şantiye bilgilerini, raporlarını ve dosyalarını paylaştığı web alanıdır. Herkes bazı sayfaları giriş yapmadan okuyabilir; dosya yükleme ve düzenleme için admin girişi gerekir.</p>
+                    <div class="guide-steps">
+                        <div class="guide-step">
+                            <span class="guide-step-num">1</span>
+                            <div>
+                                <strong>Ana sayfayı açın</strong>
+                                <p>Üstteki <em>Mimar Sinan Göktaş</em> yazısına tıklayarak her zaman ana sayfaya dönebilirsiniz.</p>
+                            </div>
+                        </div>
+                        <div class="guide-step">
+                            <span class="guide-step-num">2</span>
+                            <div>
+                                <strong>Menüden sayfa seçin</strong>
+                                <p>Bilgisayarda üst menü, telefonda sağ üstteki <strong>☰</strong> (hamburger) düğmesi görünür.</p>
+                            </div>
+                        </div>
+                        <div class="guide-step">
+                            <span class="guide-step-num">3</span>
+                            <div>
+                                <strong>Dosya indirmek için tıklayın</strong>
+                                <p>Rapor, not veya çizelge listesinde dosya adına tıklayınca bilgisayarınıza iner veya açılır.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="menu" class="section-card guide-block">
+                    <h2 class="section-title">2. Menü ve gezinme</h2>
+                    <table class="guide-table">
+                        <thead>
+                            <tr>
+                                <th>Menü adı</th>
+                                <th>Nerede?</th>
+                                <th>Ne yaparsınız?</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Genel Şantiye Bilgileri</strong></td>
+                                <td>Üst menü</td>
+                                <td>Şantiye listesi ve genel dosyalar</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Günlük Raporlar</strong></td>
+                                <td>Üst menü</td>
+                                <td>Şantiye günlük rapor dosyaları</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Bilgi Notları</strong></td>
+                                <td>Üst menü</td>
+                                <td>Bilgilendirme notları (PDF, Word vb.)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>İş Takibi</strong></td>
+                                <td>Üst menü</td>
+                                <td>Giriş yapmış personel/kullanıcı ekranı</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Şantiye Çizelgesi</strong></td>
+                                <td>Üst menü</td>
+                                <td>İş programı / çizelge dosyaları</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Konum Haritası</strong></td>
+                                <td>Üst menü</td>
+                                <td>Ofis konumunu haritada görme</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Kullanım Kılavuzu</strong></td>
+                                <td>Üst menü</td>
+                                <td>Bu sayfa — yardım ve açıklamalar</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Giriş / Admin</strong></td>
+                                <td>Sağ üst köşe</td>
+                                <td>Giriş yapma, kayıt olma, admin paneli</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <section id="sayfalar" class="section-card guide-block">
+                    <h2 class="section-title">3. Sayfalar ne işe yarar?</h2>
+                    <div class="guide-grid">
+                        <article class="guide-card">
+                            <h3>Ana Sayfa</h3>
+                            <p>Ofis tanıtımı, hızlı bağlantılar, iletişim bilgileri. Yeni başlayanlar buradan yönlenebilir.</p>
+                            <a href="index.html" class="btn btn-ghost btn-sm">Ana sayfaya git →</a>
+                        </article>
+                        <article class="guide-card">
+                            <h3>Genel Şantiye Bilgileri</h3>
+                            <p>Kayıtlı şantiyeler tabloda listelenir. <strong>Görüntüle</strong> ile adres, telefon ve harita bilgisi açılır. Altta genel dosyalar vardır.</p>
+                            <a href="general-info.html" class="btn btn-ghost btn-sm">Sayfayı aç →</a>
+                        </article>
+                        <article class="guide-card">
+                            <h3>Günlük Raporlar / Notlar / Çizelge</h3>
+                            <p>Admin tarafından yüklenen dosyalar listelenir. Dosya adına tıklayarak indirir veya açarsınız.</p>
+                            <a href="daily-reports.html" class="btn btn-ghost btn-sm">Raporlara git →</a>
+                        </article>
+                        <article class="guide-card">
+                            <h3>Konum Haritası</h3>
+                            <p>Ofisin harita üzerindeki yeri. Yakınlaştırıp konumu inceleyebilirsiniz.</p>
+                            <a href="map.html" class="btn btn-ghost btn-sm">Haritayı aç →</a>
+                        </article>
+                        <article class="guide-card">
+                            <h3>İş Takibi</h3>
+                            <p>Giriş yapmış kullanıcılar için özet ekran. Profil bilgileri ve rapor dosyalarına erişim sağlar.</p>
+                            <a href="work-tracking.html" class="btn btn-ghost btn-sm">İş takibine git →</a>
+                        </article>
+                        <article class="guide-card">
+                            <h3>Giriş / Kayıt</h3>
+                            <p>Personel veya kullanıcı hesabı oluşturma ve giriş yapma. Admin buradan yönetim paneline girer.</p>
+                            <a href="login.html" class="btn btn-ghost btn-sm">Giriş sayfası →</a>
+                        </article>
+                    </div>
+                </section>
+
+                <section id="ziyaretci" class="section-card guide-block">
+                    <h2 class="section-title">4. Giriş yapmadan kullanım</h2>
+                    <ol class="guide-ordered">
+                        <li><strong>Genel Şantiye Bilgileri</strong> sayfasına gidin.</li>
+                        <li>Tablodan bir şantiye seçip <strong>Görüntüle</strong> düğmesine basın.</li>
+                        <li>Açılan sayfada adres, telefon ve açıklamayı okuyun; varsa <strong>Haritada Aç</strong> ile konuma gidebilirsiniz.</li>
+                        <li>Rapor, not veya çizelge sayfalarından dosyaları indirmek için dosya adına tıklayın.</li>
+                    </ol>
+                    <p class="guide-note">Dosya yüklemek veya şantiye düzenlemek için admin girişi gerekir.</p>
+                </section>
+
+                <section id="kayit" class="section-card guide-block">
+                    <h2 class="section-title">5. Kayıt olma</h2>
+                    <ol class="guide-ordered">
+                        <li><a href="login.html">Giriş</a> sayfasında <strong>Kayıt Ol</strong> sekmesine geçin.</li>
+                        <li><strong>Kayıt tipi:</strong> Personel (ofis çalışanı) veya Kullanıcı (iş yapılan taraf).</li>
+                        <li>Kullanıcı adı (3–32 karakter) ve şifre (en az 6 karakter) belirleyin.</li>
+                        <li><strong>Telefon:</strong> Alan <code>+90 5</code> ile başlar; sadece 9 rakam daha yazın. Örnek: <code>+90 5321234567</code></li>
+                        <li>Ad soyad alanına rakam yazılamaz. Kullanıcı rolünde şantiye/kurum adı da isteğe bağlı doldurulabilir.</li>
+                        <li><strong>Kayıt Ol</strong> düğmesine basın; ardından giriş yapabilirsiniz.</li>
+                    </ol>
+                </section>
+
+                <section id="giris" class="section-card guide-block">
+                    <h2 class="section-title">6. Giriş yapma</h2>
+                    <ol class="guide-ordered">
+                        <li>Sağ üstten <strong>Giriş / Admin</strong> veya menüden giriş sayfasına gidin.</li>
+                        <li>Kullanıcı adı ve şifrenizi yazıp <strong>Giriş Yap</strong> deyin.</li>
+                        <li>Personel ve kullanıcılar <strong>İş Takibi</strong> sayfasına yönlendirilir.</li>
+                        <li>Admin hesabı <strong>Admin Paneli</strong>ne açılır.</li>
+                    </ol>
+                    <p class="guide-note">Admin kullanıcı adı ve şifresini sistem yöneticiniz verir.</p>
+                </section>
+
+                <section id="admin" class="section-card guide-block">
+                    <h2 class="section-title">7. Admin paneli</h2>
+                    <p class="section-lead">Admin girişinden sonra üstte sekmeler görünür. Her sekmenin görevi:</p>
+                    <table class="guide-table">
+                        <thead>
+                            <tr>
+                                <th>Sekme</th>
+                                <th>Ne yapılır?</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Genel Bilgiler</strong></td>
+                                <td>Şantiye ekle/düzenle (Kaydet), genel dosya yükle</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Günlük Raporlar / Notlar / Çizelge</strong></td>
+                                <td>İlgili kategoriye dosya ekle, sil veya listele</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Kullanıcılar</strong></td>
+                                <td>Kayıtlı kullanıcı bilgilerini düzenle, Kaydet ile kaydet</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Site Önizleme</strong></td>
+                                <td>Ziyaretçi sayfalarını yeni sekmede kontrol et</td>
+                            </tr>
+                            <tr>
+                                <td><strong>İletişim &amp; Harita</strong></td>
+                                <td>Ana sayfa iletişim bilgileri ve harita koordinatları</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p class="guide-note">Şantiye kaydederken ad zorunludur. Telefon boş bırakılabilir; doldurulursa <code>+90 5XXXXXXXXX</code> formatında olmalıdır.</p>
+                    <a href="admin-panel.html" class="btn btn-primary">Admin paneline git</a>
+                </section>
+
+                <section id="hatalar" class="section-card guide-block">
+                    <h2 class="section-title">8. Sık görülen uyarılar</h2>
+                    <ul class="guide-faq">
+                        <li>
+                            <strong>«Telefon formatı +90 5XXXXXXXXX olmalı»</strong>
+                            <p>Telefon alanında <code>+90 5</code> sabit kalır; ardından tam 9 rakam girin (toplam 14 karakter).</p>
+                        </li>
+                        <li>
+                            <strong>«… alanına rakam yazılamaz»</strong>
+                            <p>Ad soyad, şantiye adı ve kurum adı alanlarına sadece harf yazılabilir.</p>
+                        </li>
+                        <li>
+                            <strong>«Giriş başarısız»</strong>
+                            <p>Kullanıcı adı veya şifre hatalı. Büyük/küçük harfe dikkat edin.</p>
+                        </li>
+                        <li>
+                            <strong>«Henüz dosya yüklenmemiş»</strong>
+                            <p>Admin henüz o kategoriye dosya eklememiş; normal bir durumdur.</p>
+                        </li>
+                        <li>
+                            <strong>Sayfa açılmıyor / veri gelmiyor</strong>
+                            <p>Site sunucusu çalışmıyor olabilir. Yerel kullanımda <code>start.bat</code> veya <code>npm start</code> çalıştırın.</p>
+                        </li>
+                    </ul>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <footer class="site-footer">
+        <p>&copy; <span id="year"></span> Mimar Sinan Göktaş · <a href="index.html">Ana Sayfa</a> · <a href="kullanim-kilavuzu.html">Kullanım Kılavuzu</a></p>
+    </footer>
+    <script src="js/app.js"></script>
+</body>
+</html>

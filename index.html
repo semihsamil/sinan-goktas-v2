@@ -1,97 +1,202 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Mimar Sinan Göktaş — mimarlık ofisi web sitesi.">
-    <meta name="api-base" content="">
-    <title>Mimar Sinan Göktaş</title>
-    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="css/style.css">
-    <script src="js/api-host.js"></script>
-    <script src="js/config.js"></script>
-</head>
-<body data-page="home">
-    <header class="site-header" id="site-header"></header>
-
-    <section class="hero">
-        <div class="hero-content">
-            <h1>Mimar Sinan Göktaş</h1>
-            <p>Mimarlık ofisi. Şantiye raporları, çizelgeler ve dosyalar bu siteden paylaşılır.</p>
-            <div class="hero-actions">
-                <a href="general-info.html" class="btn btn-primary">Şantiye Bilgileri</a>
-                <a href="daily-reports.html" class="btn btn-ghost hero-btn-light">Günlük Raporlar</a>
-                <a href="login.html" class="btn btn-ghost hero-btn-light">Yönetici Girişi</a>
-            </div>
-        </div>
-    </section>
-
-    <main>
-        <section class="section">
-            <div class="quick-grid">
-                <a href="general-info.html" class="quick-card">
-                    <h3>Genel Bilgiler</h3>
-                    <p>Şantiye listesi ve dosyalar</p>
-                </a>
-                <a href="daily-reports.html" class="quick-card">
-                    <h3>Günlük Raporlar</h3>
-                    <p>Yüklenen rapor dosyaları</p>
-                </a>
-                <a href="schedule.html" class="quick-card">
-                    <h3>Çizelge</h3>
-                    <p>İş programı dosyaları</p>
-                </a>
-                <a href="map.html" class="quick-card">
-                    <h3>Harita</h3>
-                    <p>Ofis konumu</p>
-                </a>
-            </div>
-        </section>
-
-        <section class="section" id="about">
-            <div class="section-card">
-                <h2 class="section-title">Hakkımızda</h2>
-                <p class="section-lead">Sivas merkezli mimarlık ofisiyiz. Konut ve ticari yapı projeleri ile şantiye takip işlerinde çalışıyoruz. Bu site; rapor, çizelge ve şantiye bilgilerinin paylaşıldığı yönetim alanıdır.</p>
-            </div>
-        </section>
-
-        <section class="section" id="services">
-            <div class="section-card">
-                <h2 class="section-title">Hizmetler</h2>
-                <div class="service-grid">
-                    <article class="service-card">
-                        <h3>Mimari Proje</h3>
-                        <p>Konut ve işyeri projelerinin hazırlanması.</p>
-                    </article>
-                    <article class="service-card">
-                        <h3>İç Mekan</h3>
-                        <p>Oda düzeni ve malzeme planlaması.</p>
-                    </article>
-                    <article class="service-card">
-                        <h3>Şantiye Takibi</h3>
-                        <p>Günlük rapor, çizelge ve dosya takibi.</p>
-                    </article>
-                    <article class="service-card">
-                        <h3>Danışmanlık</h3>
-                        <p>Ruhsat ve uygulama süreçlerinde destek.</p>
-                    </article>
-                </div>
-            </div>
-        </section>
-
-        <section class="section" id="contact">
-            <div class="section-card">
-                <h2 class="section-title">İletişim</h2>
-                <ul class="contact-list" id="contact-list">
-                    <li>Yükleniyor...</li>
-                </ul>
-            </div>
-        </section>
-    </main>
-
-    <footer class="site-footer">
-        <p>&copy; <span id="year"></span> Mimar Sinan Göktaş. Tüm hakları saklıdır.</p>
-    </footer>
-    <script src="js/app.js"></script>
-</body>
-</html>
+<!DOCTYPE html>
+
+<html lang="tr">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="description" content="Mimar Sinan Göktaş — mimarlık ofisi web sitesi.">
+
+    <meta name="api-base" content="">
+
+    <title>Mimar Sinan Göktaş</title>
+
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+
+    <link rel="stylesheet" href="css/style.css">
+
+    <script src="js/api-host.js"></script>
+
+    <script src="js/config.js"></script>
+
+</head>
+
+<body data-page="home">
+
+    <header class="site-header" id="site-header"></header>
+
+
+
+    <section class="hero">
+
+        <div class="hero-content">
+
+            <h1>Mimar Sinan Göktaş</h1>
+
+            <p>Mimarlık ofisi. Şantiye raporları, çizelgeler ve dosyalar bu siteden paylaşılır.</p>
+
+            <div class="hero-actions">
+
+                <a href="general-info.html" class="btn btn-primary">Şantiye Bilgileri</a>
+
+                <a href="daily-reports.html" class="btn btn-ghost hero-btn-light">Günlük Raporlar</a>
+
+                <a href="login.html" class="btn btn-ghost hero-btn-light">Yönetici Girişi</a>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+    <main>
+
+        <section class="section">
+
+            <div class="quick-grid">
+
+                <a href="general-info.html" class="quick-card">
+
+                    <h3>Genel Bilgiler</h3>
+
+                    <p>Şantiye listesi ve dosyalar</p>
+
+                </a>
+
+                <a href="daily-reports.html" class="quick-card">
+
+                    <h3>Günlük Raporlar</h3>
+
+                    <p>Yüklenen rapor dosyaları</p>
+
+                </a>
+
+                <a href="schedule.html" class="quick-card">
+
+                    <h3>Çizelge</h3>
+
+                    <p>İş programı dosyaları</p>
+
+                </a>
+
+                <a href="map.html" class="quick-card">
+
+                    <h3>Harita</h3>
+
+                    <p>Ofis konumu</p>
+
+                </a>
+
+                <a href="kullanim-kilavuzu.html" class="quick-card">
+
+                    <h3>Kullanım Kılavuzu</h3>
+
+                    <p>Siteyi adım adım öğrenin</p>
+
+                </a>
+
+            </div>
+
+        </section>
+
+
+
+        <section class="section" id="about">
+
+            <div class="section-card">
+
+                <h2 class="section-title">Hakkımızda</h2>
+
+                <p class="section-lead">Sivas merkezli mimarlık ofisiyiz. Konut ve ticari yapı projeleri ile şantiye takip işlerinde çalışıyoruz. Bu site; rapor, çizelge ve şantiye bilgilerinin paylaşıldığı yönetim alanıdır.</p>
+
+            </div>
+
+        </section>
+
+
+
+        <section class="section" id="services">
+
+            <div class="section-card">
+
+                <h2 class="section-title">Hizmetler</h2>
+
+                <div class="service-grid">
+
+                    <article class="service-card">
+
+                        <h3>Mimari Proje</h3>
+
+                        <p>Konut ve işyeri projelerinin hazırlanması.</p>
+
+                    </article>
+
+                    <article class="service-card">
+
+                        <h3>İç Mekan</h3>
+
+                        <p>Oda düzeni ve malzeme planlaması.</p>
+
+                    </article>
+
+                    <article class="service-card">
+
+                        <h3>Şantiye Takibi</h3>
+
+                        <p>Günlük rapor, çizelge ve dosya takibi.</p>
+
+                    </article>
+
+                    <article class="service-card">
+
+                        <h3>Danışmanlık</h3>
+
+                        <p>Ruhsat ve uygulama süreçlerinde destek.</p>
+
+                    </article>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <section class="section" id="contact">
+
+            <div class="section-card">
+
+                <h2 class="section-title">İletişim</h2>
+
+                <ul class="contact-list" id="contact-list">
+
+                    <li>Yükleniyor...</li>
+
+                </ul>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+
+    <footer class="site-footer">
+
+        <p>&copy; <span id="year"></span> Mimar Sinan Göktaş. Tüm hakları saklıdır. · <a href="kullanim-kilavuzu.html">Kullanım Kılavuzu</a></p>
+
+    </footer>
+
+    <script src="js/app.js"></script>
+
+</body>
+
+</html>
+
