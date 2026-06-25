@@ -12,6 +12,13 @@ const ROLE_OPTIONS = [
 document.addEventListener('DOMContentLoaded', async () => {
     if (!requireAdminPage()) return;
 
+    try {
+        await apiFetch('/api/me');
+    } catch (e) {
+        redirectToLogin(e.message || 'Oturum geçersiz. Lütfen tekrar giriş yapın.');
+        return;
+    }
+
     InputFilters.attachMobilePhoneFields(document);
     InputFilters.attachTextNameFields(document);
     InputFilters.attachCoordinateFields(document);
@@ -350,9 +357,25 @@ function resetNewUserForm() {
 }
 
 function initNewUserForm() {
+    const form = document.getElementById('user-add-form');
+    const toggleBtn = document.getElementById('user-add-toggle');
+    const cancelBtn = document.getElementById('user-add-cancel');
     const roleSelect = document.getElementById('new_user_role');
+
     roleSelect?.addEventListener('change', updateNewUserRoleFields);
     updateNewUserRoleFields();
+
+    toggleBtn?.addEventListener('click', () => {
+        resetNewUserForm();
+        if (form) form.hidden = false;
+        InputFilters.attachMobilePhoneFields(form || document);
+        InputFilters.attachTextNameFields(form || document);
+    });
+
+    cancelBtn?.addEventListener('click', () => {
+        if (form) form.hidden = true;
+        resetNewUserForm();
+    });
 
     document.getElementById('create-user-btn')?.addEventListener('click', createUser);
 }
@@ -418,9 +441,16 @@ async function createUser() {
         });
         showStatus('users-status', msg.message || 'Yeni kullanıcı eklendi', 'success');
         resetNewUserForm();
+        const form = document.getElementById('user-add-form');
+        if (form) form.hidden = true;
         loadUsers();
     } catch (e) {
-        showStatus('users-status', parseApiError(e.message), 'error');
+        const errMsg = parseApiError(e.message);
+        if (String(errMsg).includes('Oturum') || String(errMsg).includes('giriş')) {
+            redirectToLogin(errMsg);
+            return;
+        }
+        showStatus('users-status', errMsg, 'error');
     }
 }
 

@@ -1,4 +1,14 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const notice = sessionStorage.getItem('login_notice');
+    if (notice) {
+        sessionStorage.removeItem('login_notice');
+        const statusEl = document.getElementById('login-status');
+        if (statusEl) {
+            statusEl.textContent = notice;
+            statusEl.className = 'form-status error';
+        }
+    }
+
     if (getToken()) {
         const user = getUser();
         window.location.replace(user?.role === 'admin' ? 'admin-panel.html' : 'work-tracking.html');

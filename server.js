@@ -343,6 +343,20 @@ function migrateSalaryPaymentsTable(done) {
     );
 }
 
+function migrateAuthSessionsTable(done) {
+    db.run(
+        `CREATE TABLE IF NOT EXISTS auth_sessions (
+            token TEXT PRIMARY KEY,
+            user_id INTEGER,
+            username TEXT,
+            role TEXT,
+            full_name TEXT,
+            created_at INTEGER NOT NULL
+        )`,
+        done
+    );
+}
+
 function mapConstructionSite(row) {
     return {
         id: row.id,
@@ -425,6 +439,9 @@ db.serialize(() => {
     migrateSalaryPaymentsTable((migrateErr) => {
         if (migrateErr) console.error('Maaş tablosu migration hatası:', migrateErr.message);
     });
+    migrateAuthSessionsTable((migrateErr) => {
+        if (migrateErr) console.error('Oturum tablosu migration hatası:', migrateErr.message);
+    });
 
     Object.entries(DEFAULT_SETTINGS).forEach(([key, value]) => {
         db.run('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)', [key, value]);
@@ -472,11 +489,44 @@ function createToken() {
     return crypto.randomBytes(32).toString('hex');
 }
 
+function sessionFromRow(row) {
+    return {
+        userId: row.user_id ?? undefined,
+        username: row.username || '',
+        role: row.role || 'personel',
+        fullName: row.full_name || '',
+        created: row.created_at,
+    };
+}
+
+function storeSession(token, session, cb) {
+    sessions.set(token, session);
+    db.run(
+        `INSERT OR REPLACE INTO auth_sessions (token, user_id, username, role, full_name, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+            token,
+            session.userId ?? null,
+            session.username || '',
+            session.role || 'personel',
+            session.fullName || '',
+            session.created,
+        ],
+        cb
+    );
+}
+
+function removeSession(token, cb) {
+    sessions.delete(token);
+    db.run('DELETE FROM auth_sessions WHERE token = ?', [token], cb || (() => {}));
+}
+
 function cleanSessions() {
-    const now = Date.now();
+    const cutoff = Date.now() - SESSION_MAX_AGE_MS;
     for (const [token, data] of sessions.entries()) {
-        if (now - data.created > SESSION_MAX_AGE_MS) sessions.delete(token);
+        if (data.created < cutoff) sessions.delete(token);
     }
+    db.run('DELETE FROM auth_sessions WHERE created_at < ?', [cutoff]);
 }
 
 setInterval(cleanSessions, 60 * 60 * 1000);
@@ -486,13 +536,35 @@ function requireAuth(req, res, next) {
     const auth = req.get('authorization') || '';
     const queryToken = typeof req.query?.token === 'string' ? req.query.token.trim() : '';
     const token = auth.replace(/^Bearer\s+/i, '').trim() || queryToken;
-    const session = sessions.get(token);
-    if (!token || !session) {
-        return res.status(401).json({ error: 'Yetkisiz erişim' });
+    if (!token) {
+        return res.status(401).json({ error: 'Oturum bulunamadı. Lütfen tekrar giriş yapın.' });
     }
-    req.session = session;
-    req.token = token;
-    next();
+
+    const cached = sessions.get(token);
+    if (cached) {
+        if (Date.now() - cached.created > SESSION_MAX_AGE_MS) {
+            removeSession(token);
+            return res.status(401).json({ error: 'Oturum süresi doldu. Lütfen tekrar giriş yapın.' });
+        }
+        req.session = cached;
+        req.token = token;
+        return next();
+    }
+
+    db.get('SELECT * FROM auth_sessions WHERE token = ?', [token], (err, row) => {
+        if (err || !row) {
+            return res.status(401).json({ error: 'Oturum geçersiz. Lütfen tekrar giriş yapın.' });
+        }
+        if (Date.now() - row.created_at > SESSION_MAX_AGE_MS) {
+            removeSession(token);
+            return res.status(401).json({ error: 'Oturum süresi doldu. Lütfen tekrar giriş yapın.' });
+        }
+        const session = sessionFromRow(row);
+        sessions.set(token, session);
+        req.session = session;
+        req.token = token;
+        next();
+    });
 }
 
 function requireAdmin(req, res, next) {
@@ -702,26 +774,32 @@ app.post('/api/login', (req, res) => {
 
         if (user) {
             const token = createToken();
-            sessions.set(token, {
+            const session = {
                 userId: user.id,
                 username: user.username,
                 role: user.role || 'personel',
                 fullName: user.full_name || '',
                 created: Date.now(),
-            });
-            return res.json({
-                token,
-                username: user.username,
-                role: user.role || 'personel',
-                fullName: user.full_name || '',
-                message: 'Giriş başarılı',
+            };
+            return storeSession(token, session, (storeErr) => {
+                if (storeErr) return res.status(500).json({ error: 'Giriş sırasında hata oluştu' });
+                return res.json({
+                    token,
+                    username: user.username,
+                    role: user.role || 'personel',
+                    fullName: user.full_name || '',
+                    message: 'Giriş başarılı',
+                });
             });
         }
 
         if (ADMIN_PASSWORD && username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
             const token = createToken();
-            sessions.set(token, { username, role: 'admin', created: Date.now() });
-            return res.json({ token, username, role: 'admin', message: 'Giriş başarılı' });
+            const session = { username, role: 'admin', created: Date.now() };
+            return storeSession(token, session, (storeErr) => {
+                if (storeErr) return res.status(500).json({ error: 'Giriş sırasında hata oluştu' });
+                return res.json({ token, username, role: 'admin', message: 'Giriş başarılı' });
+            });
         }
 
         return res.status(401).json({ error: 'Kullanıcı adı veya şifre hatalı' });
@@ -1042,8 +1120,10 @@ app.get('/api/me', requireAuth, (req, res) => {
 });
 
 app.post('/api/logout', requireAuth, (req, res) => {
-    sessions.delete(req.token);
-    res.json({ ok: true });
+    removeSession(req.token, (err) => {
+        if (err) return res.status(500).json({ error: 'Çıkış sırasında hata oluştu' });
+        res.json({ ok: true });
+    });
 });
 
 app.get('/api/personnel-schedule', (_req, res) => {

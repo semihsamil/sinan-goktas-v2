@@ -147,10 +147,12 @@
             </div>
 
             <div id="panel-users" class="tab-panel">
-                <p class="section-lead">Yeni üye ekleyin veya mevcut kullanıcıları düzenleyin.</p>
-
-                <div class="section-card" id="new-user-form-wrap">
-                    <h3 class="tab-subtitle">Yeni Kullanıcı Ekle</h3>
+                <p class="section-lead">Kullanıcı adı, şifre, ad soyad ve diğer bilgileri düzenleyebilirsiniz. Değişiklikler Kaydet ile uygulanır.</p>
+                <div class="schedule-toolbar">
+                    <button type="button" class="btn btn-primary" id="user-add-toggle">+ Yeni Kullanıcı</button>
+                </div>
+                <div id="user-add-form" class="section-card schedule-form-card" hidden>
+                    <h4 class="tab-subtitle">Yeni kullanıcı</h4>
                     <div class="form-row">
                         <div class="form-group">
                             <label for="new_user_role">Rol *</label>
@@ -199,10 +201,11 @@
                         <label for="new_user_note">Not</label>
                         <input type="text" id="new_user_note">
                     </div>
-                    <button type="button" class="btn btn-primary" id="create-user-btn">Yeni Kullanıcı Ekle</button>
+                    <div class="admin-site-form-actions">
+                        <button type="button" class="btn btn-primary" id="create-user-btn">Kaydet</button>
+                        <button type="button" class="btn btn-ghost" id="user-add-cancel">İptal</button>
+                    </div>
                 </div>
-
-                <h3 class="tab-subtitle" style="margin-top:1.5rem;">Kayıtlı Kullanıcılar</h3>
                 <div id="users-list" class="users-table-wrap">Yükleniyor...</div>
                 <p id="users-status" class="form-status"></p>
             </div>
