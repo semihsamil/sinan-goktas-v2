@@ -59,7 +59,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     attachSyncListeners();
     initScheduleAdminPanel();
-    initPayrollModal();
 
     document.getElementById('save-construction-site')?.addEventListener('click', saveConstructionSite);
     document.getElementById('cancel-construction-site')?.addEventListener('click', resetConstructionSiteForm);
@@ -188,8 +187,8 @@ async function loadUsers() {
                     <th>Şantiye</th>
                     <th>Kurum</th>
                     <th>Not</th>
+                    <th>Maaş Günü</th>
                     <th>İşlem</th>
-                    <th>Maaş / Fatura</th>
                 </tr>
             </thead>
             <tbody>
@@ -211,14 +210,19 @@ async function loadUsers() {
                     <td><input type="text" class="user-field user-site" data-id="${u.id}" value="${escapeAttr(u.siteName)}" data-text-name></td>
                     <td><input type="text" class="user-field user-company" data-id="${u.id}" value="${escapeAttr(u.companyName)}" data-text-name></td>
                     <td><input type="text" class="user-field user-note" data-id="${u.id}" value="${escapeAttr(u.extraNote)}"></td>
+                    <td class="user-salary-day-cell">${
+                        u.role === 'personel'
+                            ? `<div class="salary-day-field">
+                        <input type="hidden" class="user-salary-day" data-id="${u.id}" data-salary-day-value value="${escapeAttr(u.salaryDayOfMonth ?? '')}">
+                        <span class="salary-day-label">${escapeHtml(InputFilters.formatSalaryDayLabel(u.salaryDayOfMonth ?? ''))}</span>
+                        <input type="date" class="user-salary-day-picker" data-id="${u.id}" data-salary-day-picker title="Ayın hangi günü">
+                    </div>`
+                            : '<span class="text-muted">—</span>'
+                    }</td>
                     <td class="users-actions">
                         <button type="button" class="btn btn-primary btn-sm user-save" data-id="${u.id}">Kaydet</button>
                         <button type="button" class="btn btn-ghost btn-sm user-delete" data-id="${u.id}">Sil</button>
                     </td>
-                    <td class="users-payroll">${u.role === 'personel'
-                        ? `<button type="button" class="btn btn-primary btn-sm user-pay" data-id="${u.id}" data-name="${escapeAttr(u.fullName || u.username)}">Maaş Öde</button>
-                           <button type="button" class="btn btn-ghost btn-sm user-invoice" data-id="${u.id}" data-name="${escapeAttr(u.fullName || u.username)}">Fatura Kes</button>`
-                        : '<span class="text-muted">—</span>'}</td>
                 </tr>`
                     )
                     .join('')}
@@ -231,15 +235,10 @@ async function loadUsers() {
         wrap.querySelectorAll('.user-delete').forEach((btn) => {
             btn.addEventListener('click', () => deleteUser(btn.dataset.id));
         });
-        wrap.querySelectorAll('.user-pay').forEach((btn) => {
-            btn.addEventListener('click', () => openPayrollModal(btn.dataset.id, btn.dataset.name, 'salary'));
-        });
-        wrap.querySelectorAll('.user-invoice').forEach((btn) => {
-            btn.addEventListener('click', () => openPayrollModal(btn.dataset.id, btn.dataset.name, 'invoice'));
-        });
 
         InputFilters.attachMobilePhoneFields(wrap);
         InputFilters.attachTextNameFields(wrap);
+        InputFilters.attachSalaryDayFields(wrap);
         wrap.querySelectorAll('.user-phone').forEach((input) => {
             input.value = InputFilters.toMobilePhoneFieldValue(input.value);
         });
@@ -257,6 +256,7 @@ async function saveUser(id) {
     const siteName = document.querySelector(`.user-site[data-id="${id}"]`)?.value?.trim() || '';
     const companyName = document.querySelector(`.user-company[data-id="${id}"]`)?.value?.trim() || '';
     const extraNote = document.querySelector(`.user-note[data-id="${id}"]`)?.value?.trim() || '';
+    const salaryDayOfMonth = document.querySelector(`.user-salary-day[data-id="${id}"]`)?.value?.trim() || '';
 
     if (!username) {
         showStatus('users-status', 'Kullanıcı adı boş olamaz.', 'error');
@@ -287,6 +287,13 @@ async function saveUser(id) {
         showStatus('users-status', companyErr, 'error');
         return;
     }
+    if (role === 'personel') {
+        const salaryErr = InputFilters.validateSalaryDayOfMonth(salaryDayOfMonth, true);
+        if (salaryErr) {
+            showStatus('users-status', salaryErr, 'error');
+            return;
+        }
+    }
 
     try {
         const msg = await apiFetch(`/api/users/${id}`, {
@@ -300,6 +307,7 @@ async function saveUser(id) {
                 siteName,
                 companyName,
                 extraNote,
+                salaryDayOfMonth: role === 'personel' ? salaryDayOfMonth : null,
             }),
         });
         showStatus('users-status', msg.message || 'Kullanıcı güncellendi', 'success');
@@ -338,8 +346,12 @@ async function deleteUser(id) {
 function updateNewUserRoleFields() {
     const role = document.getElementById('new_user_role')?.value || 'personel';
     const showCustomer = role === 'is_yapilan';
+    const showSalary = role === 'personel';
     document.querySelectorAll('.new-user-customer-fields').forEach((el) => {
         el.classList.toggle('hidden', !showCustomer);
+    });
+    document.querySelectorAll('.new-user-salary-fields').forEach((el) => {
+        el.classList.toggle('hidden', !showSalary);
     });
 }
 
@@ -353,6 +365,9 @@ function resetNewUserForm() {
     document.getElementById('new_user_site').value = '';
     document.getElementById('new_user_company').value = '';
     document.getElementById('new_user_note').value = '';
+    document.getElementById('new_user_salary_day').value = '';
+    document.getElementById('new_user_salary_day_picker').value = '';
+    document.getElementById('new_user_salary_day_label').textContent = 'Takvimden gün seçin';
     updateNewUserRoleFields();
 }
 
@@ -370,6 +385,7 @@ function initNewUserForm() {
         if (form) form.hidden = false;
         InputFilters.attachMobilePhoneFields(form || document);
         InputFilters.attachTextNameFields(form || document);
+        InputFilters.attachSalaryDayFields(form || document);
     });
 
     cancelBtn?.addEventListener('click', () => {
@@ -390,6 +406,7 @@ async function createUser() {
     const siteName = document.getElementById('new_user_site')?.value?.trim() || '';
     const companyName = document.getElementById('new_user_company')?.value?.trim() || '';
     const extraNote = document.getElementById('new_user_note')?.value?.trim() || '';
+    const salaryDayOfMonth = document.getElementById('new_user_salary_day')?.value?.trim() || '';
 
     if (!username) {
         showStatus('users-status', 'Kullanıcı adı zorunlu.', 'error');
@@ -424,6 +441,13 @@ async function createUser() {
         showStatus('users-status', companyErr, 'error');
         return;
     }
+    if (role === 'personel') {
+        const salaryErr = InputFilters.validateSalaryDayOfMonth(salaryDayOfMonth, true);
+        if (salaryErr) {
+            showStatus('users-status', salaryErr, 'error');
+            return;
+        }
+    }
 
     try {
         const msg = await apiFetch('/api/users', {
@@ -437,6 +461,7 @@ async function createUser() {
                 siteName: role === 'is_yapilan' ? siteName : '',
                 companyName: role === 'is_yapilan' ? companyName : '',
                 extraNote,
+                salaryDayOfMonth: role === 'personel' ? salaryDayOfMonth : null,
             }),
         });
         showStatus('users-status', msg.message || 'Yeni kullanıcı eklendi', 'success');
@@ -632,11 +657,13 @@ async function loadPersonnelOptions() {
 
 function resetScheduleForm() {
     document.getElementById('schedule_edit_id').value = '';
-    document.getElementById('schedule_salary_day').value = '';
     document.getElementById('schedule_leave_day').value = '';
     document.getElementById('schedule_note').value = '';
     const userSelect = document.getElementById('schedule_user');
-    if (userSelect) userSelect.disabled = false;
+    if (userSelect) {
+        userSelect.value = '';
+        userSelect.disabled = false;
+    }
 }
 
 async function populateScheduleUserSelect(selectedId) {
@@ -690,7 +717,6 @@ function initScheduleAdminPanel() {
 async function saveScheduleRow() {
     const editId = document.getElementById('schedule_edit_id')?.value?.trim();
     const userId = document.getElementById('schedule_user')?.value;
-    const salaryDay = document.getElementById('schedule_salary_day')?.value;
     const leaveDay = document.getElementById('schedule_leave_day')?.value || '';
     const note = document.getElementById('schedule_note')?.value?.trim() || '';
 
@@ -700,7 +726,7 @@ async function saveScheduleRow() {
     }
 
     try {
-        const body = { userId, salaryDay, leaveDay, note };
+        const body = { userId, leaveDay, note };
         const result = editId
             ? await apiFetch(`/api/personnel-schedule/${editId}`, { method: 'PUT', body: JSON.stringify(body) })
             : await apiFetch('/api/personnel-schedule', { method: 'POST', body: JSON.stringify(body) });
@@ -733,7 +759,6 @@ async function editScheduleRow(id, rows) {
     await populateScheduleUserSelect(row.userId);
     const userSelect = document.getElementById('schedule_user');
     if (userSelect) userSelect.disabled = true;
-    document.getElementById('schedule_salary_day').value = row.salaryDay || '';
     document.getElementById('schedule_leave_day').value = row.leaveDay || '';
     document.getElementById('schedule_note').value = row.note || '';
     const form = document.getElementById('schedule-add-form');
@@ -741,62 +766,6 @@ async function editScheduleRow(id, rows) {
         form.hidden = false;
         ScheduleUi.applyMinDateInputs(form);
     }
-}
-
-function openPayrollModal(userId, userName, mode) {
-    const modal = document.getElementById('payroll-modal');
-    if (!modal) return;
-    document.getElementById('payroll_user_id').value = userId;
-    document.getElementById('payroll_mode').value = mode;
-    document.getElementById('payroll-modal-title').textContent = mode === 'invoice' ? 'Fatura Kes' : 'Maaş Öde';
-    document.getElementById('payroll-modal-user').textContent = userName || '';
-    document.getElementById('payroll_amount').value = '';
-    document.getElementById('payroll_date').value = ScheduleUi.getTodayMinDate();
-    document.getElementById('payroll_note').value = '';
-    document.getElementById('payroll-modal-status').textContent = '';
-    ScheduleUi.applyMinDateInputs(modal);
-    modal.hidden = false;
-}
-
-function closePayrollModal() {
-    const modal = document.getElementById('payroll-modal');
-    if (modal) modal.hidden = true;
-}
-
-function initPayrollModal() {
-    document.getElementById('payroll-cancel')?.addEventListener('click', closePayrollModal);
-    document.getElementById('payroll-modal')?.addEventListener('click', (e) => {
-        if (e.target.id === 'payroll-modal') closePayrollModal();
-    });
-    document.getElementById('payroll-submit')?.addEventListener('click', async () => {
-        const userId = document.getElementById('payroll_user_id').value;
-        const mode = document.getElementById('payroll_mode').value;
-        const amount = parseFloat(document.getElementById('payroll_amount').value);
-        const paymentDate = document.getElementById('payroll_date').value;
-        const note = document.getElementById('payroll_note').value.trim();
-        const statusEl = document.getElementById('payroll-modal-status');
-
-        if (!amount || amount <= 0) {
-            statusEl.textContent = 'Geçerli bir tutar girin.';
-            statusEl.className = 'form-status error';
-            return;
-        }
-
-        try {
-            const path = mode === 'invoice' ? `/api/users/${userId}/invoice` : `/api/users/${userId}/salary-payment`;
-            const body =
-                mode === 'invoice'
-                    ? { amount, issueDate: paymentDate, note }
-                    : { amount, paymentDate, note };
-            const result = await apiFetch(path, { method: 'POST', body: JSON.stringify(body) });
-            statusEl.textContent = result.message || 'Kaydedildi';
-            statusEl.className = 'form-status success';
-            setTimeout(closePayrollModal, 900);
-        } catch (e) {
-            statusEl.textContent = parseApiError(e.message);
-            statusEl.className = 'form-status error';
-        }
-    });
 }
 
 function attachSyncListeners() {

@@ -102,6 +102,7 @@ function ensureUsersColumns(done) {
         { name: 'site_name', sql: 'ALTER TABLE users ADD COLUMN site_name TEXT' },
         { name: 'company_name', sql: 'ALTER TABLE users ADD COLUMN company_name TEXT' },
         { name: 'extra_note', sql: 'ALTER TABLE users ADD COLUMN extra_note TEXT' },
+        { name: 'salary_day_of_month', sql: 'ALTER TABLE users ADD COLUMN salary_day_of_month INTEGER' },
     ];
 
     db.all('PRAGMA table_info(users)', [], (err, cols) => {
@@ -222,6 +223,18 @@ function validateCoordinateOptional(value, fieldLabel) {
     return null;
 }
 
+function validateSalaryDayOfMonth(value, required = false) {
+    const raw = value === null || value === undefined ? '' : String(value).trim();
+    if (!raw) {
+        return required ? { error: 'Maaş günü zorunlu (1-31)' } : { day: null };
+    }
+    const day = parseInt(raw, 10);
+    if (!Number.isInteger(day) || day < 1 || day > 31) {
+        return { error: 'Maaş günü 1 ile 31 arasında olmalı' };
+    }
+    return { day };
+}
+
 function validateAdminUserCreate(body) {
     const username = String(body?.username || '').trim();
     const password = String(body?.password || '');
@@ -264,6 +277,13 @@ function validateAdminUserCreate(body) {
         return { error: 'Not en fazla 200 karakter olabilir' };
     }
 
+    let salaryDayOfMonth = null;
+    if (role === 'personel') {
+        const salaryErr = validateSalaryDayOfMonth(body?.salaryDayOfMonth, true);
+        if (salaryErr.error) return salaryErr;
+        salaryDayOfMonth = salaryErr.day;
+    }
+
     return {
         username,
         password,
@@ -273,6 +293,7 @@ function validateAdminUserCreate(body) {
         siteName,
         companyName,
         extraNote,
+        salaryDayOfMonth,
     };
 }
 
@@ -298,11 +319,6 @@ function validateFutureOrTodayDate(value, fieldLabel, required = false) {
     if (!d) return { error: `${fieldLabel} geçerli bir tarih olmalı` };
     if (d < todayDateOnly()) return { error: `${fieldLabel} geçmiş bir tarih olamaz` };
     return null;
-}
-
-function generateInvoiceNo(userId) {
-    const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    return `FTR-${stamp}-${userId}-${Math.floor(Math.random() * 900 + 100)}`;
 }
 
 function migrateFilesSiteId(done) {
@@ -872,7 +888,8 @@ app.post('/api/register', (req, res) => {
 
 app.get('/api/users', requireAuth, requireAdmin, (_req, res) => {
     db.all(
-        `SELECT id, username, password, role, full_name, phone, site_name, company_name, extra_note, created_at
+        `SELECT id, username, password, role, full_name, phone, site_name, company_name, extra_note,
+                salary_day_of_month, created_at
          FROM users ORDER BY created_at DESC`,
         [],
         (err, rows) => {
@@ -889,6 +906,7 @@ app.get('/api/users', requireAuth, requireAdmin, (_req, res) => {
                     siteName: u.site_name || '',
                     companyName: u.company_name || '',
                     extraNote: u.extra_note || '',
+                    salaryDayOfMonth: u.salary_day_of_month ?? null,
                     createdAt: u.created_at || '',
                 }))
             );
@@ -902,8 +920,8 @@ app.post('/api/users', requireAuth, requireAdmin, (req, res) => {
 
     db.run(
         `INSERT INTO users
-            (username, password, role, full_name, phone, site_name, company_name, extra_note, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            (username, password, role, full_name, phone, site_name, company_name, extra_note, salary_day_of_month, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             validated.username,
             validated.password,
@@ -913,6 +931,7 @@ app.post('/api/users', requireAuth, requireAdmin, (req, res) => {
             validated.siteName,
             validated.companyName,
             validated.extraNote,
+            validated.salaryDayOfMonth,
             new Date().toISOString(),
         ],
         function createUserCb(err) {
@@ -1009,6 +1028,7 @@ app.put('/api/users/:id', requireAuth, requireAdmin, (req, res) => {
         function updateUserRecord() {
             const fields = [];
             const values = [];
+            const nextRole = role || user.role || 'personel';
 
             if (username && username !== user.username) {
                 fields.push('username=?');
@@ -1028,6 +1048,17 @@ app.put('/api/users/:id', requireAuth, requireAdmin, (req, res) => {
             values.push(companyName);
             fields.push('extra_note=?');
             values.push(extraNote);
+            if (nextRole === 'personel') {
+                const salaryErr = validateSalaryDayOfMonth(req.body?.salaryDayOfMonth, true);
+                if (salaryErr.error) {
+                    return res.status(400).json(salaryErr);
+                }
+                fields.push('salary_day_of_month=?');
+                values.push(salaryErr.day);
+            } else {
+                fields.push('salary_day_of_month=?');
+                values.push(null);
+            }
             if (password) {
                 fields.push('password=?');
                 values.push(password);
@@ -1128,11 +1159,11 @@ app.post('/api/logout', requireAuth, (req, res) => {
 
 app.get('/api/personnel-schedule', (_req, res) => {
     db.all(
-        `SELECT ps.id, ps.user_id, ps.salary_day, ps.leave_day, ps.note, ps.created_at,
-                u.full_name, u.username
+        `SELECT ps.id, ps.user_id, ps.leave_day, ps.note, ps.created_at,
+                u.full_name, u.username, u.salary_day_of_month
          FROM personnel_schedule ps
          LEFT JOIN users u ON u.id = ps.user_id
-         ORDER BY ps.salary_day ASC, u.full_name ASC`,
+         ORDER BY u.salary_day_of_month ASC, u.full_name ASC`,
         [],
         (err, rows) => {
             if (err) return res.status(500).json({ error: 'Çizelge okunamadı' });
@@ -1142,7 +1173,8 @@ app.get('/api/personnel-schedule', (_req, res) => {
                     userId: r.user_id,
                     fullName: r.full_name || r.username || '',
                     username: r.username || '',
-                    salaryDay: r.salary_day || '',
+                    salaryDay: r.salary_day_of_month ? String(r.salary_day_of_month) : '',
+                    salaryDayOfMonth: r.salary_day_of_month ?? null,
                     leaveDay: r.leave_day || '',
                     note: r.note || '',
                     createdAt: r.created_at || '',
@@ -1154,20 +1186,22 @@ app.get('/api/personnel-schedule', (_req, res) => {
 
 app.post('/api/personnel-schedule', requireAuth, requireAdmin, (req, res) => {
     const userId = parseInt(req.body?.userId, 10);
-    const salaryDay = String(req.body?.salaryDay || '').trim();
     const leaveDay = String(req.body?.leaveDay || '').trim();
     const note = String(req.body?.note || '').trim();
 
     if (!userId) return res.status(400).json({ error: 'Personel seçin' });
 
-    db.get('SELECT id, role FROM users WHERE id=?', [userId], (userErr, user) => {
+    db.get('SELECT id, role, salary_day_of_month FROM users WHERE id=?', [userId], (userErr, user) => {
         if (userErr || !user) return res.status(404).json({ error: 'Personel bulunamadı' });
         if (user.role !== 'personel') {
             return res.status(400).json({ error: 'Çizelgeye yalnızca personel rolü eklenebilir' });
         }
+        if (!user.salary_day_of_month) {
+            return res.status(400).json({
+                error: 'Personelin maaş günü tanımlı değil. Kullanıcılar sekmesinden maaş günü girin.',
+            });
+        }
 
-        const salaryErr = validateFutureOrTodayDate(salaryDay, 'Maaş günü', true);
-        if (salaryErr) return res.status(400).json(salaryErr);
         const leaveErr = validateFutureOrTodayDate(leaveDay, 'İzin günü', false);
         if (leaveErr) return res.status(400).json(leaveErr);
         if (note.length > 200) return res.status(400).json({ error: 'Not en fazla 200 karakter olabilir' });
@@ -1175,7 +1209,7 @@ app.post('/api/personnel-schedule', requireAuth, requireAdmin, (req, res) => {
         db.run(
             `INSERT INTO personnel_schedule (user_id, salary_day, leave_day, note, created_at)
              VALUES (?, ?, ?, ?, ?)`,
-            [userId, salaryDay, leaveDay, note, new Date().toISOString()],
+            [userId, String(user.salary_day_of_month), leaveDay, note, new Date().toISOString()],
             function insertCb(err) {
                 if (err) return res.status(500).json({ error: 'Kayıt eklenemedi' });
                 bumpSync();
@@ -1189,19 +1223,16 @@ app.put('/api/personnel-schedule/:id', requireAuth, requireAdmin, (req, res) => 
     const id = parseInt(req.params.id, 10);
     if (!id) return res.status(400).json({ error: 'Geçersiz id' });
 
-    const salaryDay = String(req.body?.salaryDay || '').trim();
     const leaveDay = String(req.body?.leaveDay || '').trim();
     const note = String(req.body?.note || '').trim();
 
-    const salaryErr = validateFutureOrTodayDate(salaryDay, 'Maaş günü', true);
-    if (salaryErr) return res.status(400).json(salaryErr);
     const leaveErr = validateFutureOrTodayDate(leaveDay, 'İzin günü', false);
     if (leaveErr) return res.status(400).json(leaveErr);
     if (note.length > 200) return res.status(400).json({ error: 'Not en fazla 200 karakter olabilir' });
 
     db.run(
-        'UPDATE personnel_schedule SET salary_day=?, leave_day=?, note=? WHERE id=?',
-        [salaryDay, leaveDay, note, id],
+        'UPDATE personnel_schedule SET leave_day=?, note=? WHERE id=?',
+        [leaveDay, note, id],
         function updateCb(err) {
             if (err) return res.status(500).json({ error: 'Güncellenemedi' });
             if (this.changes === 0) return res.status(404).json({ error: 'Kayıt bulunamadı' });
@@ -1219,86 +1250,6 @@ app.delete('/api/personnel-schedule/:id', requireAuth, requireAdmin, (req, res) 
         if (this.changes === 0) return res.status(404).json({ error: 'Kayıt bulunamadı' });
         bumpSync();
         res.json({ ok: true, message: 'Kayıt silindi' });
-    });
-});
-
-app.get('/api/users/:id/payments', requireAuth, requireAdmin, (req, res) => {
-    const userId = parseInt(req.params.id, 10);
-    if (!userId) return res.status(400).json({ error: 'Geçersiz id' });
-    db.all(
-        `SELECT id, amount, payment_date, invoice_no, payment_type, note, created_at
-         FROM salary_payments WHERE user_id=? ORDER BY created_at DESC`,
-        [userId],
-        (err, rows) => {
-            if (err) return res.status(500).json({ error: 'Ödemeler okunamadı' });
-            res.json(rows || []);
-        }
-    );
-});
-
-app.post('/api/users/:id/salary-payment', requireAuth, requireAdmin, (req, res) => {
-    const userId = parseInt(req.params.id, 10);
-    const amount = parseFloat(req.body?.amount);
-    const paymentDate = String(req.body?.paymentDate || '').trim();
-    const note = String(req.body?.note || '').trim();
-
-    if (!userId) return res.status(400).json({ error: 'Geçersiz id' });
-    if (!amount || amount <= 0) return res.status(400).json({ error: 'Geçerli bir tutar girin' });
-    const dateErr = validateFutureOrTodayDate(paymentDate, 'Ödeme tarihi', true);
-    if (dateErr) return res.status(400).json(dateErr);
-
-    db.get('SELECT id, role FROM users WHERE id=?', [userId], (userErr, user) => {
-        if (userErr || !user) return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
-        if (user.role !== 'personel') {
-            return res.status(400).json({ error: 'Maaş ödemesi yalnızca personel için yapılabilir' });
-        }
-
-        db.run(
-            `INSERT INTO salary_payments (user_id, amount, payment_date, payment_type, note, created_at)
-             VALUES (?, ?, ?, 'salary', ?, ?)`,
-            [userId, amount, paymentDate, note, new Date().toISOString()],
-            function payCb(err) {
-                if (err) return res.status(500).json({ error: 'Ödeme kaydedilemedi' });
-                bumpSync();
-                res.json({ ok: true, message: 'Maaş ödemesi kaydedildi', id: this.lastID });
-            }
-        );
-    });
-});
-
-app.post('/api/users/:id/invoice', requireAuth, requireAdmin, (req, res) => {
-    const userId = parseInt(req.params.id, 10);
-    const amount = parseFloat(req.body?.amount);
-    const issueDate = String(req.body?.issueDate || '').trim();
-    const note = String(req.body?.note || '').trim();
-
-    if (!userId) return res.status(400).json({ error: 'Geçersiz id' });
-    if (!amount || amount <= 0) return res.status(400).json({ error: 'Geçerli bir tutar girin' });
-    const dateErr = validateFutureOrTodayDate(issueDate, 'Fatura tarihi', true);
-    if (dateErr) return res.status(400).json(dateErr);
-
-    db.get('SELECT id, role, full_name FROM users WHERE id=?', [userId], (userErr, user) => {
-        if (userErr || !user) return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
-        if (user.role !== 'personel') {
-            return res.status(400).json({ error: 'Fatura yalnızca personel için kesilebilir' });
-        }
-
-        const invoiceNo = generateInvoiceNo(userId);
-        db.run(
-            `INSERT INTO salary_payments (user_id, amount, payment_date, invoice_no, payment_type, note, created_at)
-             VALUES (?, ?, ?, ?, 'invoice', ?, ?)`,
-            [userId, amount, issueDate, invoiceNo, note, new Date().toISOString()],
-            function invCb(err) {
-                if (err) return res.status(500).json({ error: 'Fatura kaydedilemedi' });
-                bumpSync();
-                res.json({
-                    ok: true,
-                    message: `Fatura kesildi: ${invoiceNo}`,
-                    invoiceNo,
-                    id: this.lastID,
-                });
-            }
-        );
     });
 });
 

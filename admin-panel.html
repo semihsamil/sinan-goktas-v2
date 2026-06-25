@@ -112,7 +112,7 @@
             </div>
 
             <div id="panel-schedule" class="tab-panel">
-                <p class="section-lead">Personel takip çizelgesi (Excel tarzı tablo). Geçmiş tarih seçilemez.</p>
+                <p class="section-lead">Personel takip çizelgesi. Maaş günü Kullanıcılar sekmesinden tanımlanır; burada yalnızca izin günü düzenlenir.</p>
                 <div class="schedule-toolbar">
                     <button type="button" class="btn btn-primary" id="schedule-add-toggle">+ Kayıt Ekle</button>
                 </div>
@@ -123,10 +123,6 @@
                         <div class="form-group">
                             <label for="schedule_user">Personel *</label>
                             <select id="schedule_user"></select>
-                        </div>
-                        <div class="form-group">
-                            <label for="schedule_salary_day">Maaş günü *</label>
-                            <input type="date" id="schedule_salary_day" data-no-past required>
                         </div>
                         <div class="form-group">
                             <label for="schedule_leave_day">İzin günü</label>
@@ -197,6 +193,15 @@
                             <input type="text" id="new_user_company" data-text-name>
                         </div>
                     </div>
+                    <div class="form-group new-user-salary-fields">
+                        <label for="new_user_salary_day_picker">Maaş günü *</label>
+                        <div class="salary-day-field">
+                            <input type="hidden" id="new_user_salary_day" data-salary-day-value value="">
+                            <span class="salary-day-label" id="new_user_salary_day_label">Takvimden gün seçin</span>
+                            <input type="date" id="new_user_salary_day_picker" data-salary-day-picker title="Ayın hangi günü">
+                        </div>
+                        <p class="field-hint">Sadece gün seçilir (ör. her ayın 10'u)</p>
+                    </div>
                     <div class="form-group">
                         <label for="new_user_note">Not</label>
                         <input type="text" id="new_user_note">
@@ -261,32 +266,6 @@
             </div>
 
             <p id="admin-status" class="form-status"></p>
-        </div>
-    </div>
-
-    <div id="payroll-modal" class="modal-overlay" hidden>
-        <div class="modal-card">
-            <h3 class="tab-subtitle" id="payroll-modal-title">İşlem</h3>
-            <p id="payroll-modal-user" class="section-lead"></p>
-            <input type="hidden" id="payroll_user_id" value="">
-            <input type="hidden" id="payroll_mode" value="">
-            <div class="form-group">
-                <label for="payroll_amount">Tutar (TL) *</label>
-                <input type="number" id="payroll_amount" min="1" step="0.01" placeholder="örn: 25000">
-            </div>
-            <div class="form-group">
-                <label for="payroll_date">Tarih *</label>
-                <input type="date" id="payroll_date" data-no-past required>
-            </div>
-            <div class="form-group">
-                <label for="payroll_note">Not</label>
-                <input type="text" id="payroll_note" placeholder="İsteğe bağlı">
-            </div>
-            <div class="admin-site-form-actions">
-                <button type="button" class="btn btn-primary" id="payroll-submit">Kaydet</button>
-                <button type="button" class="btn btn-ghost" id="payroll-cancel">İptal</button>
-            </div>
-            <p id="payroll-modal-status" class="form-status"></p>
         </div>
     </div>
 

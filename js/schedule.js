@@ -27,6 +27,13 @@ function formatDateTr(value) {
     return d.toLocaleDateString('tr-TR');
 }
 
+function formatSalaryDayOfMonth(value) {
+    if (!value) return '-';
+    const day = parseInt(value, 10);
+    if (!Number.isInteger(day) || day < 1 || day > 31) return escapeHtml(String(value));
+    return `Her ayın ${day}'i`;
+}
+
 async function fetchPersonnelSchedule() {
     const res = await fetch(apiUrl('/api/personnel-schedule'));
     if (!res.ok) throw new Error('Çizelge yüklenemedi');
@@ -55,7 +62,7 @@ function renderScheduleGrid(container, rows, { admin = false, onDelete, onEdit }
                 .map(
                     (r) => `<tr data-id="${r.id}">
                 <td>${escapeHtml(r.fullName || r.username)}</td>
-                <td>${formatDateTr(r.salaryDay)}</td>
+                <td>${formatSalaryDayOfMonth(r.salaryDay)}</td>
                 <td>${formatDateTr(r.leaveDay)}</td>
                 <td>${escapeHtml(r.note || '-')}</td>
                 ${
@@ -88,4 +95,5 @@ window.ScheduleUi = {
     fetchPersonnelSchedule,
     renderScheduleGrid,
     formatDateTr,
+    formatSalaryDayOfMonth,
 };

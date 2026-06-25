@@ -167,6 +167,66 @@ function attachTextNameFields(root = document) {
     root.querySelectorAll('[data-text-name]').forEach((el) => attachTextNameInput(el));
 }
 
+function formatSalaryDayLabel(day) {
+    const n = parseInt(day, 10);
+    if (!Number.isInteger(n) || n < 1 || n > 31) return 'Gün seçin';
+    return `Her ayın ${n}'i`;
+}
+
+function salaryDayPickerValue(day) {
+    const n = parseInt(day, 10);
+    if (!Number.isInteger(n) || n < 1 || n > 31) return '';
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const maxDay = new Date(year, month + 1, 0).getDate();
+    const safeDay = Math.min(n, maxDay);
+    const m = String(month + 1).padStart(2, '0');
+    const d = String(safeDay).padStart(2, '0');
+    return `${year}-${m}-${d}`;
+}
+
+function extractDayFromDateValue(value) {
+    if (!value) return '';
+    const parts = String(value).split('-');
+    if (parts.length === 3) {
+        const day = parseInt(parts[2], 10);
+        return Number.isInteger(day) ? String(day) : '';
+    }
+    const d = new Date(`${value}T12:00:00`);
+    if (Number.isNaN(d.getTime())) return '';
+    return String(d.getDate());
+}
+
+function attachSalaryDayPicker(picker, hiddenInput, labelEl) {
+    if (!picker || picker.dataset.salaryDayBound === '1') return;
+    picker.dataset.salaryDayBound = '1';
+    picker.addEventListener('change', () => {
+        const day = extractDayFromDateValue(picker.value);
+        if (hiddenInput) hiddenInput.value = day;
+        if (labelEl) labelEl.textContent = formatSalaryDayLabel(day);
+    });
+}
+
+function attachSalaryDayFields(root = document) {
+    root.querySelectorAll('[data-salary-day-picker]').forEach((picker) => {
+        const wrap = picker.closest('.salary-day-field');
+        const hidden = wrap?.querySelector('[data-salary-day-value]');
+        const label = wrap?.querySelector('.salary-day-label');
+        if (hidden?.value) picker.value = salaryDayPickerValue(hidden.value);
+        if (label) label.textContent = formatSalaryDayLabel(hidden?.value);
+        attachSalaryDayPicker(picker, hidden, label);
+    });
+}
+
+function validateSalaryDayOfMonth(value, required = false) {
+    const trimmed = String(value ?? '').trim();
+    if (!trimmed) return required ? 'Maaş günü zorunlu (takvimden gün seçin)' : null;
+    const day = parseInt(trimmed, 10);
+    if (!Number.isInteger(day) || day < 1 || day > 31) return 'Maaş günü 1-31 arasında olmalı';
+    return null;
+}
+
 window.InputFilters = {
     MOBILE_PHONE_PREFIX,
     MOBILE_PHONE_REGEX,
@@ -184,4 +244,8 @@ window.InputFilters = {
     attachMobilePhoneFields,
     attachTextNameFields,
     attachCoordinateFields,
+    formatSalaryDayLabel,
+    salaryDayPickerValue,
+    attachSalaryDayFields,
+    validateSalaryDayOfMonth,
 };

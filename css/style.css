@@ -1096,8 +1096,31 @@ main {
     white-space: nowrap;
 }
 
-.users-payroll .btn {
-    margin: 2px 0;
+.salary-day-field {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+}
+
+.salary-day-label {
+    font-weight: 600;
+    color: var(--text);
+    min-width: 7rem;
+}
+
+.salary-day-field input[type='date'] {
+    max-width: 11rem;
+}
+
+.field-hint {
+    margin: 0.35rem 0 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.user-salary-day-cell {
+    min-width: 12rem;
 }
 
 .text-muted {
