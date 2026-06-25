@@ -5,7 +5,7 @@ if not exist node_modules (
     call npm install
 )
 echo Sunucu baslatiliyor: http://localhost:3000
-echo Admin: http://localhost:3000/login.html
+echo Admin: http://localhost:3000/admin-login.html
 echo Kapatmak icin bu pencerede Ctrl+C
 start http://localhost:3000
 node server.js

@@ -1385,6 +1385,6 @@ app.use((err, _req, res, _next) => {
 
 app.listen(PORT, () => {
     console.log(`Site: http://localhost:${PORT}`);
-    console.log(`Admin: http://localhost:${PORT}/login.html`);
+    console.log(`Admin: http://localhost:${PORT}/admin-login.html`);
     if (!ADMIN_PASSWORD) console.warn('Uyarı: .env içinde ADMIN_PASSWORD ayarlayın');
 });

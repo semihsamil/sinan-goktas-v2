@@ -33,6 +33,7 @@ function renderHeader() {
 
     const active = getActivePage();
     const isAdmin = active === 'admin';
+    const isAdminLogin = active === 'admin-login';
 
     const desktopNav = isAdmin
         ? ''
@@ -47,7 +48,7 @@ function renderHeader() {
         <a href="index.html" class="brand">Mimar Sinan Göktaş</a>
         ${desktopNav}
         <div class="header-actions">
-            ${isAdmin ? '' : '<a href="login.html" class="btn btn-primary btn-login-desktop">Giriş / Admin</a>'}
+            ${isAdmin ? '' : isAdminLogin ? '<a href="login.html" class="btn btn-ghost btn-login-desktop">Kullanıcı Girişi</a>' : '<a href="login.html" class="btn btn-primary btn-login-desktop">Giriş Yap</a>'}
             ${isAdmin ? '<a href="index.html" class="btn btn-ghost">Siteye Dön</a>' : ''}
             <button type="button" class="burger" id="burger" aria-label="Menü">☰</button>
         </div>

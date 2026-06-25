@@ -17,7 +17,7 @@ npm start
 
 ## Admin girişi
 
-- Adres: http://localhost:3000/login.html
+- Adres: http://localhost:3000/admin-login.html
 - Kullanıcı: `admin` (`.env` → `ADMIN_USERNAME`)
 - Şifre: `admin123` (`.env` → `ADMIN_PASSWORD` — değiştirmen önerilir)
 

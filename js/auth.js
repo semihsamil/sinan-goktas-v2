@@ -67,6 +67,13 @@ function redirectToLogin(message) {
     window.location.href = 'login.html';
 }
 
+function redirectToAdminLogin(message) {
+    setToken('');
+    setUser(null);
+    if (message) sessionStorage.setItem('admin_login_notice', message);
+    window.location.href = 'admin-login.html';
+}
+
 function requireAuthPage() {
     if (!getToken()) {
         window.location.href = 'login.html';
@@ -76,7 +83,10 @@ function requireAuthPage() {
 }
 
 function requireAdminPage() {
-    if (!requireAuthPage()) return false;
+    if (!getToken()) {
+        window.location.href = 'admin-login.html';
+        return false;
+    }
     const user = getUser();
     if (!user || user.role !== 'admin') {
         alert('Bu sayfa sadece admin kullanıcılar içindir.');

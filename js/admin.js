@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         await apiFetch('/api/me');
     } catch (e) {
-        redirectToLogin(e.message || 'Oturum geçersiz. Lütfen tekrar giriş yapın.');
+        redirectToAdminLogin(e.message || 'Oturum geçersiz. Lütfen tekrar giriş yapın.');
         return;
     }
 
@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('logout-btn')?.addEventListener('click', () => {
         setToken('');
         setUser(null);
-        window.location.href = 'login.html';
+        window.location.href = 'admin-login.html';
     });
 });
 
@@ -472,7 +472,7 @@ async function createUser() {
     } catch (e) {
         const errMsg = parseApiError(e.message);
         if (String(errMsg).includes('Oturum') || String(errMsg).includes('giriş')) {
-            redirectToLogin(errMsg);
+            redirectToAdminLogin(errMsg);
             return;
         }
         showStatus('users-status', errMsg, 'error');
