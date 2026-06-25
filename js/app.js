@@ -4,7 +4,6 @@ const NAV_ITEMS = [
     { href: 'daily-reports.html', label: 'Günlük Raporlar', id: 'reports' },
     { href: 'notes.html', label: 'Bilgi Notları', id: 'notes' },
     { href: 'work-tracking.html', label: 'İş Takibi', id: 'work' },
-    { href: 'schedule.html', label: 'Şantiye Çizelgesi', id: 'schedule' },
     { href: 'map.html', label: 'Konum Haritası', id: 'map' },
     { href: 'kullanim-kilavuzu.html', label: 'Kullanım Kılavuzu', id: 'guide' },
 ];
@@ -13,14 +12,12 @@ const PAGE_CATEGORY = {
     general: 'general',
     reports: 'reports',
     notes: 'notes',
-    schedule: 'schedule',
 };
 
 const EMPTY_MESSAGES = {
     general: 'Henüz genel bilgi dosyası yüklenmemiş.',
     reports: 'Henüz günlük rapor dosyası yüklenmemiş.',
     notes: 'Henüz bilgi notu dosyası yüklenmemiş.',
-    schedule: 'Henüz çizelge dosyası yüklenmemiş.',
 };
 
 function getActivePage() {
@@ -179,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (page === 'home') loadContactInfo();
 
     const category = PAGE_CATEGORY[page];
-    if (category && page !== 'schedule') {
+    if (category) {
         loadFileList('file-list', category, false);
         setInterval(() => loadFileList('file-list', category, false), 15000);
     }

@@ -27,7 +27,7 @@
                 <button type="button" class="admin-tab active" data-tab="general">Genel Bilgiler</button>
                 <button type="button" class="admin-tab" data-tab="reports">Günlük Raporlar</button>
                 <button type="button" class="admin-tab" data-tab="notes">Bilgi Notları</button>
-                <button type="button" class="admin-tab" data-tab="schedule">Çizelge</button>
+                <button type="button" class="admin-tab" data-tab="schedule">Personel Takibi</button>
                 <button type="button" class="admin-tab" data-tab="users">Kullanıcılar</button>
                 <button type="button" class="admin-tab" data-tab="preview">Site Önizleme</button>
                 <button type="button" class="admin-tab" data-tab="settings">İletişim &amp; Harita</button>
@@ -112,12 +112,12 @@
             </div>
 
             <div id="panel-schedule" class="tab-panel">
-                <p class="section-lead">Personel takip çizelgesi. Maaş günü Kullanıcılar sekmesinden tanımlanır; izin tek gün veya tarih aralığı olarak girilebilir (geçmiş tarih seçilemez).</p>
+                <p class="section-lead">Personel maaş günü ve izin takibi (yalnızca admin panelinde). Maaş günü Kullanıcılar sekmesinden tanımlanır; izin tek gün veya tarih aralığı olarak girilebilir (geçmiş tarih seçilemez).</p>
                 <div class="schedule-toolbar">
                     <button type="button" class="btn btn-primary" id="schedule-add-toggle">+ Kayıt Ekle</button>
                 </div>
                 <div id="schedule-add-form" class="section-card schedule-form-card" hidden>
-                    <h4 class="tab-subtitle">Yeni çizelge kaydı</h4>
+                    <h4 class="tab-subtitle">Yeni personel takip kaydı</h4>
                     <input type="hidden" id="schedule_edit_id" value="">
                     <div class="form-row">
                         <div class="form-group">
@@ -227,7 +227,6 @@
                     <a href="general-info.html" class="preview-card">Genel Şantiye Bilgileri</a>
                     <a href="daily-reports.html" class="preview-card">Günlük Raporlar</a>
                     <a href="notes.html" class="preview-card">Bilgi Notları</a>
-                    <a href="schedule.html" class="preview-card">Şantiye Çizelgesi</a>
                     <a href="map.html" class="preview-card">Konum Haritası</a>
                     <a href="work-tracking.html" class="preview-card">İş Takibi</a>
                     <a href="login.html" class="preview-card">Giriş / Kayıt</a>

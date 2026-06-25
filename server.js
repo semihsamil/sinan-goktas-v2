@@ -1199,7 +1199,7 @@ app.post('/api/logout', requireAuth, (req, res) => {
     });
 });
 
-app.get('/api/personnel-schedule', (_req, res) => {
+app.get('/api/personnel-schedule', requireAuth, requireAdmin, (_req, res) => {
     db.all(
         `SELECT ps.id, ps.user_id, ps.leave_day, ps.leave_end_day, ps.note, ps.created_at,
                 u.full_name, u.username, u.salary_day_of_month
@@ -1208,7 +1208,7 @@ app.get('/api/personnel-schedule', (_req, res) => {
          ORDER BY u.salary_day_of_month ASC, u.full_name ASC`,
         [],
         (err, rows) => {
-            if (err) return res.status(500).json({ error: 'Çizelge okunamadı' });
+            if (err) return res.status(500).json({ error: 'Personel takibi okunamadı' });
             res.json(
                 (rows || []).map((r) => ({
                     id: r.id,
@@ -1239,7 +1239,7 @@ app.post('/api/personnel-schedule', requireAuth, requireAdmin, (req, res) => {
     db.get('SELECT id, role, salary_day_of_month FROM users WHERE id=?', [userId], (userErr, user) => {
         if (userErr || !user) return res.status(404).json({ error: 'Personel bulunamadı' });
         if (user.role !== 'personel') {
-            return res.status(400).json({ error: 'Çizelgeye yalnızca personel rolü eklenebilir' });
+            return res.status(400).json({ error: 'Personel takibine yalnızca personel rolü eklenebilir' });
         }
         if (!user.salary_day_of_month) {
             return res.status(400).json({
@@ -1262,7 +1262,7 @@ app.post('/api/personnel-schedule', requireAuth, requireAdmin, (req, res) => {
             function insertCb(err) {
                 if (err) return res.status(500).json({ error: 'Kayıt eklenemedi' });
                 bumpSync();
-                res.json({ ok: true, id: this.lastID, message: 'Çizelge kaydı eklendi' });
+                res.json({ ok: true, id: this.lastID, message: 'Personel takip kaydı eklendi' });
             }
         );
     });
@@ -1284,7 +1284,7 @@ app.put('/api/personnel-schedule/:id', requireAuth, requireAdmin, (req, res) => 
             if (err) return res.status(500).json({ error: 'Güncellenemedi' });
             if (this.changes === 0) return res.status(404).json({ error: 'Kayıt bulunamadı' });
             bumpSync();
-            res.json({ ok: true, message: 'Çizelge güncellendi' });
+            res.json({ ok: true, message: 'Personel takip kaydı güncellendi' });
         }
     );
 });

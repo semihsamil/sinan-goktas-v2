@@ -71,14 +71,14 @@ function formatSalaryDayOfMonth(value) {
 
 async function fetchPersonnelSchedule() {
     const res = await fetch(apiUrl('/api/personnel-schedule'));
-    if (!res.ok) throw new Error('Çizelge yüklenemedi');
+    if (!res.ok) throw new Error('Personel takibi yüklenemedi');
     return res.json();
 }
 
 function renderScheduleGrid(container, rows, { admin = false, onDelete, onEdit } = {}) {
     if (!container) return;
     if (!rows.length) {
-        container.innerHTML = '<p class="content-box empty">Henüz çizelge kaydı yok.</p>';
+        container.innerHTML = '<p class="content-box empty">Henüz personel takip kaydı yok.</p>';
         return;
     }
 

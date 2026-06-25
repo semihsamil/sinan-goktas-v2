@@ -752,7 +752,7 @@ async function saveScheduleRow() {
 }
 
 async function deleteScheduleRow(id) {
-    if (!confirm('Bu çizelge kaydını silmek istiyor musunuz?')) return;
+    if (!confirm('Bu personel takip kaydını silmek istiyor musunuz?')) return;
     try {
         const result = await apiFetch(`/api/personnel-schedule/${id}`, { method: 'DELETE' });
         showStatus('schedule-status', result.message || 'Silindi', 'success');

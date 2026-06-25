@@ -26,7 +26,7 @@ npm start
 - Genel şantiye bilgileri (metin)
 - Günlük rapor dosyası yükleme / silme
 - Bilgi notları
-- Şantiye takip çizelgesi
+- Personel takibi (yalnızca admin paneli)
 - İletişim bilgileri (ana sayfada görünür)
 - Harita konumu (enlem/boylam)
 

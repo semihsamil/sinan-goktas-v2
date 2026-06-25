@@ -20,7 +20,7 @@ ADMIN PANELİNDE YAPILANLAR
 • Genel bilgiler — dosya ekle / sil
 • Günlük raporlar — dosya ekle / sil
 • Bilgi notları — dosya ekle / sil
-• Şantiye çizelgesi — dosya ekle / sil (Excel/PDF)
+• Personel takibi — admin paneli → Personel Takibi sekmesi
 • İletişim bilgileri (ana sayfada görünür)
 • Harita konumu (enlem/boylam)
 
