@@ -658,6 +658,7 @@ async function loadPersonnelOptions() {
 function resetScheduleForm() {
     document.getElementById('schedule_edit_id').value = '';
     document.getElementById('schedule_leave_day').value = '';
+    document.getElementById('schedule_leave_end_day').value = '';
     document.getElementById('schedule_note').value = '';
     const userSelect = document.getElementById('schedule_user');
     if (userSelect) {
@@ -701,7 +702,7 @@ function initScheduleAdminPanel() {
         resetScheduleForm();
         await populateScheduleUserSelect();
         if (form) form.hidden = false;
-        ScheduleUi.applyMinDateInputs(form || document);
+        ScheduleUi.applyLeaveRangeInputs(form || document);
     });
 
     cancelBtn?.addEventListener('click', () => {
@@ -710,7 +711,7 @@ function initScheduleAdminPanel() {
     });
 
     saveBtn?.addEventListener('click', saveScheduleRow);
-    ScheduleUi.applyMinDateInputs(document);
+    ScheduleUi.applyLeaveRangeInputs(document);
     loadScheduleAdmin();
 }
 
@@ -718,15 +719,24 @@ async function saveScheduleRow() {
     const editId = document.getElementById('schedule_edit_id')?.value?.trim();
     const userId = document.getElementById('schedule_user')?.value;
     const leaveDay = document.getElementById('schedule_leave_day')?.value || '';
+    const leaveEndDay = document.getElementById('schedule_leave_end_day')?.value || '';
     const note = document.getElementById('schedule_note')?.value?.trim() || '';
 
     if (!userId) {
         showStatus('schedule-status', 'Personel seçin.', 'error');
         return;
     }
+    if (leaveEndDay && !leaveDay) {
+        showStatus('schedule-status', 'İzin bitişi için önce başlangıç günü seçin.', 'error');
+        return;
+    }
+    if (leaveDay && leaveEndDay && leaveEndDay < leaveDay) {
+        showStatus('schedule-status', 'İzin bitiş günü başlangıç gününden önce olamaz.', 'error');
+        return;
+    }
 
     try {
-        const body = { userId, leaveDay, note };
+        const body = { userId, leaveDay, leaveEndDay, note };
         const result = editId
             ? await apiFetch(`/api/personnel-schedule/${editId}`, { method: 'PUT', body: JSON.stringify(body) })
             : await apiFetch('/api/personnel-schedule', { method: 'POST', body: JSON.stringify(body) });
@@ -760,11 +770,12 @@ async function editScheduleRow(id, rows) {
     const userSelect = document.getElementById('schedule_user');
     if (userSelect) userSelect.disabled = true;
     document.getElementById('schedule_leave_day').value = row.leaveDay || '';
+    document.getElementById('schedule_leave_end_day').value = row.leaveEndDay || '';
     document.getElementById('schedule_note').value = row.note || '';
     const form = document.getElementById('schedule-add-form');
     if (form) {
         form.hidden = false;
-        ScheduleUi.applyMinDateInputs(form);
+        ScheduleUi.applyLeaveRangeInputs(form);
     }
 }
 

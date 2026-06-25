@@ -14,6 +14,41 @@ function applyMinDateInputs(root = document) {
     });
 }
 
+function applyLeaveRangeInputs(root = document) {
+    applyMinDateInputs(root);
+    const start = root.querySelector('[data-leave-start]');
+    const end = root.querySelector('[data-leave-end]');
+    if (!start || !end) return;
+
+    const syncEndMin = () => {
+        const today = getTodayMinDate();
+        const min = start.value && start.value >= today ? start.value : today;
+        end.min = min;
+        if (end.value && end.value < min) {
+            end.value = min;
+        }
+    };
+
+    if (start.dataset.leaveRangeBound !== '1') {
+        start.dataset.leaveRangeBound = '1';
+        start.addEventListener('change', syncEndMin);
+    }
+    if (end.dataset.leaveRangeBound !== '1') {
+        end.dataset.leaveRangeBound = '1';
+        end.addEventListener('change', () => {
+            syncEndMin();
+        });
+    }
+    syncEndMin();
+}
+
+function formatLeaveRange(leaveDay, leaveEndDay) {
+    if (!leaveDay) return '-';
+    const start = formatDateTr(leaveDay);
+    if (!leaveEndDay || leaveEndDay === leaveDay) return start;
+    return `${start} – ${formatDateTr(leaveEndDay)}`;
+}
+
 function escapeHtml(text) {
     const d = document.createElement('div');
     d.textContent = text ?? '';
@@ -52,7 +87,7 @@ function renderScheduleGrid(container, rows, { admin = false, onDelete, onEdit }
             <tr>
                 <th>Personel</th>
                 <th>Maaş Günü</th>
-                <th>İzin Günü</th>
+                <th>İzin</th>
                 <th>Not</th>
                 ${admin ? '<th>İşlem</th>' : ''}
             </tr>
@@ -63,7 +98,7 @@ function renderScheduleGrid(container, rows, { admin = false, onDelete, onEdit }
                     (r) => `<tr data-id="${r.id}">
                 <td>${escapeHtml(r.fullName || r.username)}</td>
                 <td>${formatSalaryDayOfMonth(r.salaryDay)}</td>
-                <td>${formatDateTr(r.leaveDay)}</td>
+                <td>${formatLeaveRange(r.leaveDay, r.leaveEndDay)}</td>
                 <td>${escapeHtml(r.note || '-')}</td>
                 ${
                     admin
@@ -92,8 +127,10 @@ function renderScheduleGrid(container, rows, { admin = false, onDelete, onEdit }
 window.ScheduleUi = {
     getTodayMinDate,
     applyMinDateInputs,
+    applyLeaveRangeInputs,
     fetchPersonnelSchedule,
     renderScheduleGrid,
     formatDateTr,
     formatSalaryDayOfMonth,
+    formatLeaveRange,
 };

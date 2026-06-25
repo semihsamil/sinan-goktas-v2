@@ -321,6 +321,36 @@ function validateFutureOrTodayDate(value, fieldLabel, required = false) {
     return null;
 }
 
+function validateLeaveRange(leaveDay, leaveEndDay) {
+    const start = String(leaveDay || '').trim();
+    const end = String(leaveEndDay || '').trim();
+
+    if (!start && !end) {
+        return { leaveDay: '', leaveEndDay: '' };
+    }
+    if (!start && end) {
+        return { error: 'İzin başlangıç günü gerekli' };
+    }
+
+    const startErr = validateFutureOrTodayDate(start, 'İzin başlangıç günü', true);
+    if (startErr) return startErr;
+
+    if (!end || end === start) {
+        return { leaveDay: start, leaveEndDay: '' };
+    }
+
+    const endErr = validateFutureOrTodayDate(end, 'İzin bitiş günü', true);
+    if (endErr) return endErr;
+
+    const startDate = parseDateOnly(start);
+    const endDate = parseDateOnly(end);
+    if (endDate < startDate) {
+        return { error: 'İzin bitiş günü başlangıç gününden önce olamaz' };
+    }
+
+    return { leaveDay: start, leaveEndDay: end };
+}
+
 function migrateFilesSiteId(done) {
     db.all('PRAGMA table_info(files)', [], (err, cols) => {
         if (err) return done(err);
@@ -336,11 +366,20 @@ function migratePersonnelScheduleTable(done) {
             user_id INTEGER NOT NULL,
             salary_day TEXT,
             leave_day TEXT,
+            leave_end_day TEXT,
             note TEXT,
             created_at TEXT
         )`,
         done
     );
+}
+
+function migratePersonnelScheduleLeaveEnd(done) {
+    db.all('PRAGMA table_info(personnel_schedule)', [], (err, cols) => {
+        if (err) return done(err);
+        if ((cols || []).some((c) => c.name === 'leave_end_day')) return done();
+        db.run('ALTER TABLE personnel_schedule ADD COLUMN leave_end_day TEXT', done);
+    });
 }
 
 function migrateSalaryPaymentsTable(done) {
@@ -451,6 +490,9 @@ db.serialize(() => {
     });
     migratePersonnelScheduleTable((migrateErr) => {
         if (migrateErr) console.error('Çizelge tablosu migration hatası:', migrateErr.message);
+    });
+    migratePersonnelScheduleLeaveEnd((migrateErr) => {
+        if (migrateErr) console.error('Çizelge leave_end_day migration hatası:', migrateErr.message);
     });
     migrateSalaryPaymentsTable((migrateErr) => {
         if (migrateErr) console.error('Maaş tablosu migration hatası:', migrateErr.message);
@@ -1159,7 +1201,7 @@ app.post('/api/logout', requireAuth, (req, res) => {
 
 app.get('/api/personnel-schedule', (_req, res) => {
     db.all(
-        `SELECT ps.id, ps.user_id, ps.leave_day, ps.note, ps.created_at,
+        `SELECT ps.id, ps.user_id, ps.leave_day, ps.leave_end_day, ps.note, ps.created_at,
                 u.full_name, u.username, u.salary_day_of_month
          FROM personnel_schedule ps
          LEFT JOIN users u ON u.id = ps.user_id
@@ -1176,6 +1218,7 @@ app.get('/api/personnel-schedule', (_req, res) => {
                     salaryDay: r.salary_day_of_month ? String(r.salary_day_of_month) : '',
                     salaryDayOfMonth: r.salary_day_of_month ?? null,
                     leaveDay: r.leave_day || '',
+                    leaveEndDay: r.leave_end_day || '',
                     note: r.note || '',
                     createdAt: r.created_at || '',
                 }))
@@ -1186,10 +1229,12 @@ app.get('/api/personnel-schedule', (_req, res) => {
 
 app.post('/api/personnel-schedule', requireAuth, requireAdmin, (req, res) => {
     const userId = parseInt(req.body?.userId, 10);
-    const leaveDay = String(req.body?.leaveDay || '').trim();
     const note = String(req.body?.note || '').trim();
 
     if (!userId) return res.status(400).json({ error: 'Personel seçin' });
+
+    const leaveValidated = validateLeaveRange(req.body?.leaveDay, req.body?.leaveEndDay);
+    if (leaveValidated.error) return res.status(400).json({ error: leaveValidated.error });
 
     db.get('SELECT id, role, salary_day_of_month FROM users WHERE id=?', [userId], (userErr, user) => {
         if (userErr || !user) return res.status(404).json({ error: 'Personel bulunamadı' });
@@ -1201,15 +1246,19 @@ app.post('/api/personnel-schedule', requireAuth, requireAdmin, (req, res) => {
                 error: 'Personelin maaş günü tanımlı değil. Kullanıcılar sekmesinden maaş günü girin.',
             });
         }
-
-        const leaveErr = validateFutureOrTodayDate(leaveDay, 'İzin günü', false);
-        if (leaveErr) return res.status(400).json(leaveErr);
         if (note.length > 200) return res.status(400).json({ error: 'Not en fazla 200 karakter olabilir' });
 
         db.run(
-            `INSERT INTO personnel_schedule (user_id, salary_day, leave_day, note, created_at)
-             VALUES (?, ?, ?, ?, ?)`,
-            [userId, String(user.salary_day_of_month), leaveDay, note, new Date().toISOString()],
+            `INSERT INTO personnel_schedule (user_id, salary_day, leave_day, leave_end_day, note, created_at)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+                userId,
+                String(user.salary_day_of_month),
+                leaveValidated.leaveDay,
+                leaveValidated.leaveEndDay,
+                note,
+                new Date().toISOString(),
+            ],
             function insertCb(err) {
                 if (err) return res.status(500).json({ error: 'Kayıt eklenemedi' });
                 bumpSync();
@@ -1223,16 +1272,14 @@ app.put('/api/personnel-schedule/:id', requireAuth, requireAdmin, (req, res) => 
     const id = parseInt(req.params.id, 10);
     if (!id) return res.status(400).json({ error: 'Geçersiz id' });
 
-    const leaveDay = String(req.body?.leaveDay || '').trim();
     const note = String(req.body?.note || '').trim();
-
-    const leaveErr = validateFutureOrTodayDate(leaveDay, 'İzin günü', false);
-    if (leaveErr) return res.status(400).json(leaveErr);
+    const leaveValidated = validateLeaveRange(req.body?.leaveDay, req.body?.leaveEndDay);
+    if (leaveValidated.error) return res.status(400).json({ error: leaveValidated.error });
     if (note.length > 200) return res.status(400).json({ error: 'Not en fazla 200 karakter olabilir' });
 
     db.run(
-        'UPDATE personnel_schedule SET leave_day=?, note=? WHERE id=?',
-        [leaveDay, note, id],
+        'UPDATE personnel_schedule SET leave_day=?, leave_end_day=?, note=? WHERE id=?',
+        [leaveValidated.leaveDay, leaveValidated.leaveEndDay, note, id],
         function updateCb(err) {
             if (err) return res.status(500).json({ error: 'Güncellenemedi' });
             if (this.changes === 0) return res.status(404).json({ error: 'Kayıt bulunamadı' });

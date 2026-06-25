@@ -112,7 +112,7 @@
             </div>
 
             <div id="panel-schedule" class="tab-panel">
-                <p class="section-lead">Personel takip çizelgesi. Maaş günü Kullanıcılar sekmesinden tanımlanır; burada yalnızca izin günü düzenlenir.</p>
+                <p class="section-lead">Personel takip çizelgesi. Maaş günü Kullanıcılar sekmesinden tanımlanır; izin tek gün veya tarih aralığı olarak girilebilir (geçmiş tarih seçilemez).</p>
                 <div class="schedule-toolbar">
                     <button type="button" class="btn btn-primary" id="schedule-add-toggle">+ Kayıt Ekle</button>
                 </div>
@@ -125,8 +125,13 @@
                             <select id="schedule_user"></select>
                         </div>
                         <div class="form-group">
-                            <label for="schedule_leave_day">İzin günü</label>
-                            <input type="date" id="schedule_leave_day" data-no-past>
+                            <label for="schedule_leave_day">İzin başlangıç</label>
+                            <input type="date" id="schedule_leave_day" data-no-past data-leave-start>
+                        </div>
+                        <div class="form-group">
+                            <label for="schedule_leave_end_day">İzin bitiş</label>
+                            <input type="date" id="schedule_leave_end_day" data-no-past data-leave-end>
+                            <p class="field-hint">Birden fazla gün için bitiş tarihi seçin</p>
                         </div>
                     </div>
                     <div class="form-group">
