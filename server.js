@@ -205,6 +205,77 @@ function validateMobilePhoneRequired(phone) {
     return null;
 }
 
+function sanitizeCoordinateServer(value) {
+    let text = String(value || '').trim().replace(/,/g, '.');
+    text = text.replace(/[^\d.]/g, '');
+    const parts = text.split('.');
+    if (parts.length <= 1) return parts[0] || '';
+    return `${parts[0]}.${parts.slice(1).join('')}`;
+}
+
+function validateCoordinateOptional(value, fieldLabel) {
+    const trimmed = sanitizeCoordinateServer(value);
+    if (!trimmed) return null;
+    if (!/^\d+(\.\d+)?$/.test(trimmed)) {
+        return { error: `${fieldLabel} yalnızca sayı olmalı (ör. 39.7477)` };
+    }
+    return null;
+}
+
+function validateAdminUserCreate(body) {
+    const username = String(body?.username || '').trim();
+    const password = String(body?.password || '');
+    const role = String(body?.role || 'personel').trim();
+    const fullName = String(body?.fullName || '').trim();
+    const phone = String(body?.phone || '').trim();
+    const siteNameRaw = String(body?.siteName || '').trim();
+    const companyNameRaw = String(body?.companyName || '').trim();
+    const extraNote = String(body?.extraNote || '').trim();
+
+    if (!username || !password) {
+        return { error: 'Kullanıcı adı ve şifre zorunlu' };
+    }
+    if (!VALID_ROLES.includes(role)) {
+        return { error: 'Geçersiz rol' };
+    }
+    if (username.length < 3 || username.length > 32) {
+        return { error: 'Kullanıcı adı 3-32 karakter olmalı' };
+    }
+    if (!/^[a-zA-Z0-9._-]+$/.test(username)) {
+        return { error: 'Kullanıcı adında sadece harf, rakam, . _ - kullanılabilir' };
+    }
+    if (password.length < 6) {
+        return { error: 'Şifre en az 6 karakter olmalı' };
+    }
+    const fullNameErr = validateTextNameOptional(fullName, 'Ad soyad');
+    if (fullNameErr) return fullNameErr;
+    const phoneErr = validateMobilePhoneOptional(phone);
+    if (phoneErr) return phoneErr;
+    const companyName = role === 'is_yapilan' ? companyNameRaw : '';
+    const siteName = role === 'is_yapilan' ? siteNameRaw : '';
+    if (siteName.length > 80 || companyName.length > 80) {
+        return { error: 'Şantiye/Kurum adı en fazla 80 karakter olabilir' };
+    }
+    const siteNameErr = validateTextNameOptional(siteName, 'Şantiye adı');
+    if (siteNameErr) return siteNameErr;
+    const companyNameErr = validateTextNameOptional(companyName, 'Kurum / firma');
+    if (companyNameErr) return companyNameErr;
+    if (extraNote.length > 200) {
+        return { error: 'Not en fazla 200 karakter olabilir' };
+    }
+
+    return {
+        username,
+        password,
+        role,
+        fullName,
+        phone,
+        siteName,
+        companyName,
+        extraNote,
+    };
+}
+
 function todayDateOnly() {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -289,8 +360,8 @@ function validateConstructionSiteBody(body, isCreate) {
     const name = String(body?.name || '').trim();
     const address = String(body?.address || '').trim();
     const phone = String(body?.phone || '').trim();
-    const lat = String(body?.lat || '').trim().replace(',', '.');
-    const lng = String(body?.lng || '').trim().replace(',', '.');
+    const lat = sanitizeCoordinateServer(body?.lat);
+    const lng = sanitizeCoordinateServer(body?.lng);
     const description = String(body?.description || '').trim();
 
     if (isCreate && !name) return { error: 'Şantiye adı zorunlu' };
@@ -303,8 +374,10 @@ function validateConstructionSiteBody(body, isCreate) {
     const phoneErr = validateMobilePhoneOptional(phone);
     if (phoneErr) return phoneErr;
     if (description.length > 500) return { error: 'Açıklama en fazla 500 karakter olabilir' };
-    if (lat && Number.isNaN(parseFloat(lat))) return { error: 'Geçerli enlem girin' };
-    if (lng && Number.isNaN(parseFloat(lng))) return { error: 'Geçerli boylam girin' };
+    const latErr = validateCoordinateOptional(lat, 'Enlem');
+    if (latErr) return latErr;
+    const lngErr = validateCoordinateOptional(lng, 'Boylam');
+    if (lngErr) return lngErr;
 
     return { name, address, phone, lat, lng, description };
 }
@@ -494,8 +567,6 @@ app.get('/api/settings', (_req, res) => {
 
 app.post('/api/settings', requireAuth, requireAdmin, (req, res) => {
     const body = req.body || {};
-    const pairs = Object.entries(body).filter(([k]) => k in DEFAULT_SETTINGS);
-    if (!pairs.length) return res.status(400).send('Güncellenecek ayar yok');
 
     const email = String(body.contact_email || '').trim();
     if (body.contact_email !== undefined) {
@@ -505,6 +576,19 @@ app.post('/api/settings', requireAuth, requireAdmin, (req, res) => {
     }
     const phoneErr = body.contact_phone !== undefined ? validateMobilePhoneRequired(body.contact_phone) : null;
     if (phoneErr) return res.status(400).send(phoneErr.error);
+    if (body.map_lat !== undefined) {
+        const latErr = validateCoordinateOptional(body.map_lat, 'Enlem');
+        if (latErr) return res.status(400).send(latErr.error);
+        body.map_lat = sanitizeCoordinateServer(body.map_lat);
+    }
+    if (body.map_lng !== undefined) {
+        const lngErr = validateCoordinateOptional(body.map_lng, 'Boylam');
+        if (lngErr) return res.status(400).send(lngErr.error);
+        body.map_lng = sanitizeCoordinateServer(body.map_lng);
+    }
+
+    const pairs = Object.entries(body).filter(([k]) => k in DEFAULT_SETTINGS);
+    if (!pairs.length) return res.status(400).send('Güncellenecek ayar yok');
 
     saveSettings(pairs, (err) => {
         if (err) return res.status(500).send('Kayıt hatası');
@@ -730,6 +814,43 @@ app.get('/api/users', requireAuth, requireAdmin, (_req, res) => {
                     createdAt: u.created_at || '',
                 }))
             );
+        }
+    );
+});
+
+app.post('/api/users', requireAuth, requireAdmin, (req, res) => {
+    const validated = validateAdminUserCreate(req.body || {});
+    if (validated.error) return res.status(400).json({ error: validated.error });
+
+    db.run(
+        `INSERT INTO users
+            (username, password, role, full_name, phone, site_name, company_name, extra_note, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+            validated.username,
+            validated.password,
+            validated.role,
+            validated.fullName,
+            validated.phone,
+            validated.siteName,
+            validated.companyName,
+            validated.extraNote,
+            new Date().toISOString(),
+        ],
+        function createUserCb(err) {
+            if (err) {
+                if (String(err.message || '').toLowerCase().includes('unique')) {
+                    return res.status(409).json({ error: 'Bu kullanıcı adı zaten kayıtlı' });
+                }
+                return res.status(500).json({ error: 'Kullanıcı eklenemedi' });
+            }
+
+            bumpSync();
+            return res.json({
+                ok: true,
+                id: this.lastID,
+                message: 'Yeni kullanıcı eklendi',
+            });
         }
     );
 });

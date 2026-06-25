@@ -27,6 +27,57 @@ function stripDigits(value) {
     return String(value || '').replace(/\d/g, '');
 }
 
+function sanitizeCoordinate(value) {
+    let text = String(value || '').replace(/,/g, '.');
+    text = text.replace(/[^\d.]/g, '');
+    const parts = text.split('.');
+    if (parts.length <= 1) return parts[0] || '';
+    return `${parts[0]}.${parts.slice(1).join('')}`;
+}
+
+function validateCoordinate(value, fieldLabel, required = false) {
+    const trimmed = sanitizeCoordinate(value);
+    if (!trimmed) return required ? `${fieldLabel} zorunlu` : null;
+    if (!/^\d+(\.\d+)?$/.test(trimmed)) {
+        return `${fieldLabel} yalnızca sayı olmalı (ör. 39.7477)`;
+    }
+    return null;
+}
+
+function attachCoordinateInput(input) {
+    if (!input || input.dataset.coordinateAttached === '1') return;
+    input.dataset.coordinateAttached = '1';
+    input.inputMode = 'decimal';
+    input.autocomplete = 'off';
+    if (!input.placeholder) input.placeholder = '39.7477';
+
+    const apply = () => {
+        const cleaned = sanitizeCoordinate(input.value);
+        if (cleaned !== input.value) {
+            const pos = input.selectionStart ?? cleaned.length;
+            input.value = cleaned;
+            input.setSelectionRange(Math.min(pos, cleaned.length), Math.min(pos, cleaned.length));
+        }
+    };
+
+    input.addEventListener('input', apply);
+    input.addEventListener('blur', apply);
+    input.addEventListener('keypress', (e) => {
+        if (!e.key || e.key.length !== 1) return;
+        if (/[\d.,]/.test(e.key)) return;
+        e.preventDefault();
+    });
+    input.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const pasted = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+        input.value = sanitizeCoordinate(pasted);
+    });
+}
+
+function attachCoordinateFields(root = document) {
+    root.querySelectorAll('[data-coordinate]').forEach((el) => attachCoordinateInput(el));
+}
+
 function validateMobilePhone(phone, required = true) {
     const trimmed = String(phone || '').trim();
     if (!trimmed || trimmed === MOBILE_PHONE_PREFIX) {
@@ -125,8 +176,12 @@ window.InputFilters = {
     stripDigits,
     validateMobilePhone,
     validateTextName,
+    sanitizeCoordinate,
+    validateCoordinate,
     attachMobilePhoneInput,
     attachTextNameInput,
+    attachCoordinateInput,
     attachMobilePhoneFields,
     attachTextNameFields,
+    attachCoordinateFields,
 };

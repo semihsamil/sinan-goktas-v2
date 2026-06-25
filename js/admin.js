@@ -14,6 +14,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     InputFilters.attachMobilePhoneFields(document);
     InputFilters.attachTextNameFields(document);
+    InputFilters.attachCoordinateFields(document);
+
+    initNewUserForm();
 
     const tabs = document.querySelectorAll('.admin-tab');
     const panels = document.querySelectorAll('.tab-panel');
@@ -61,6 +64,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             showStatus('settings-status', phoneErr, 'error');
             return;
         }
+        const mapLatErr = InputFilters.validateCoordinate(document.getElementById('map_lat').value, 'Enlem');
+        if (mapLatErr) {
+            showStatus('settings-status', mapLatErr, 'error');
+            return;
+        }
+        const mapLngErr = InputFilters.validateCoordinate(document.getElementById('map_lng').value, 'Boylam');
+        if (mapLngErr) {
+            showStatus('settings-status', mapLngErr, 'error');
+            return;
+        }
 
         try {
             const msg = await apiFetch('/api/settings', {
@@ -69,8 +82,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     contact_email: document.getElementById('contact_email').value,
                     contact_phone: contactPhone,
                     contact_address: document.getElementById('contact_address').value,
-                    map_lat: document.getElementById('map_lat').value,
-                    map_lng: document.getElementById('map_lng').value,
+                    map_lat: InputFilters.sanitizeCoordinate(document.getElementById('map_lat').value),
+                    map_lng: InputFilters.sanitizeCoordinate(document.getElementById('map_lng').value),
                     map_label: document.getElementById('map_label').value,
                 }),
             });
@@ -315,6 +328,102 @@ async function deleteUser(id) {
     }
 }
 
+function updateNewUserRoleFields() {
+    const role = document.getElementById('new_user_role')?.value || 'personel';
+    const showCustomer = role === 'is_yapilan';
+    document.querySelectorAll('.new-user-customer-fields').forEach((el) => {
+        el.classList.toggle('hidden', !showCustomer);
+    });
+}
+
+function resetNewUserForm() {
+    document.getElementById('new_user_role').value = 'personel';
+    document.getElementById('new_user_username').value = '';
+    document.getElementById('new_user_password').value = '';
+    document.getElementById('new_user_password2').value = '';
+    document.getElementById('new_user_fullname').value = '';
+    document.getElementById('new_user_phone').value = InputFilters.MOBILE_PHONE_PREFIX;
+    document.getElementById('new_user_site').value = '';
+    document.getElementById('new_user_company').value = '';
+    document.getElementById('new_user_note').value = '';
+    updateNewUserRoleFields();
+}
+
+function initNewUserForm() {
+    const roleSelect = document.getElementById('new_user_role');
+    roleSelect?.addEventListener('change', updateNewUserRoleFields);
+    updateNewUserRoleFields();
+
+    document.getElementById('create-user-btn')?.addEventListener('click', createUser);
+}
+
+async function createUser() {
+    const role = document.getElementById('new_user_role')?.value || 'personel';
+    const username = document.getElementById('new_user_username')?.value?.trim() || '';
+    const password = document.getElementById('new_user_password')?.value || '';
+    const password2 = document.getElementById('new_user_password2')?.value || '';
+    const fullName = document.getElementById('new_user_fullname')?.value?.trim() || '';
+    const phone = document.getElementById('new_user_phone')?.value?.trim() || '';
+    const siteName = document.getElementById('new_user_site')?.value?.trim() || '';
+    const companyName = document.getElementById('new_user_company')?.value?.trim() || '';
+    const extraNote = document.getElementById('new_user_note')?.value?.trim() || '';
+
+    if (!username) {
+        showStatus('users-status', 'Kullanıcı adı zorunlu.', 'error');
+        return;
+    }
+    if (!password || password.length < 6) {
+        showStatus('users-status', 'Şifre en az 6 karakter olmalı.', 'error');
+        return;
+    }
+    if (password !== password2) {
+        showStatus('users-status', 'Şifreler eşleşmiyor.', 'error');
+        return;
+    }
+
+    const nameErr = InputFilters.validateTextName(fullName, 'Ad soyad');
+    if (nameErr) {
+        showStatus('users-status', nameErr, 'error');
+        return;
+    }
+    const phoneErr = InputFilters.validateMobilePhone(phone, false);
+    if (phoneErr) {
+        showStatus('users-status', phoneErr, 'error');
+        return;
+    }
+    const siteErr = InputFilters.validateTextName(siteName, 'Şantiye adı');
+    if (siteErr) {
+        showStatus('users-status', siteErr, 'error');
+        return;
+    }
+    const companyErr = InputFilters.validateTextName(companyName, 'Kurum / firma');
+    if (companyErr) {
+        showStatus('users-status', companyErr, 'error');
+        return;
+    }
+
+    try {
+        const msg = await apiFetch('/api/users', {
+            method: 'POST',
+            body: JSON.stringify({
+                username,
+                password,
+                role,
+                fullName,
+                phone: InputFilters.mobilePhoneForSave(phone),
+                siteName: role === 'is_yapilan' ? siteName : '',
+                companyName: role === 'is_yapilan' ? companyName : '',
+                extraNote,
+            }),
+        });
+        showStatus('users-status', msg.message || 'Yeni kullanıcı eklendi', 'success');
+        resetNewUserForm();
+        loadUsers();
+    } catch (e) {
+        showStatus('users-status', parseApiError(e.message), 'error');
+    }
+}
+
 function escapeHtml(text) {
     const d = document.createElement('div');
     d.textContent = text ?? '';
@@ -326,8 +435,8 @@ function getConstructionSiteFormData() {
         name: document.getElementById('site_name')?.value?.trim() || '',
         address: document.getElementById('site_address')?.value?.trim() || '',
         phone: InputFilters.mobilePhoneForSave(document.getElementById('site_phone')?.value),
-        lat: document.getElementById('site_lat')?.value?.trim() || '',
-        lng: document.getElementById('site_lng')?.value?.trim() || '',
+        lat: InputFilters.sanitizeCoordinate(document.getElementById('site_lat')?.value),
+        lng: InputFilters.sanitizeCoordinate(document.getElementById('site_lng')?.value),
         description: document.getElementById('site_description')?.value?.trim() || '',
     };
 }
@@ -427,6 +536,16 @@ async function saveConstructionSite() {
     const phoneErr = InputFilters.validateMobilePhone(phoneRaw, false);
     if (phoneErr) {
         showStatus('site-location-status', phoneErr, 'error');
+        return;
+    }
+    const latErr = InputFilters.validateCoordinate(document.getElementById('site_lat')?.value, 'Enlem');
+    if (latErr) {
+        showStatus('site-location-status', latErr, 'error');
+        return;
+    }
+    const lngErr = InputFilters.validateCoordinate(document.getElementById('site_lng')?.value, 'Boylam');
+    if (lngErr) {
+        showStatus('site-location-status', lngErr, 'error');
         return;
     }
 
